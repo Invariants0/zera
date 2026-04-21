@@ -1,7 +1,199 @@
 pragma language_version >= 0.22;
 
-export ledger message: Opaque<"string">;
+import CompactStandardLibrary;
 
-export circuit storeMessage(newMessage: Opaque<"string">): [] {
-  message = disclose(newMessage);
+// ─────────────────────────────────────────────────────────────
+// TYPES
+// ─────────────────────────────────────────────────────────────
+
+export struct Asset {
+  creatorPublicKey: Bytes<32>;
+  assetHash:        Bytes<32>;
+  metadataHash:     Bytes<32>;
+  timestamp:        Uint<64>;
+}
+
+// ─────────────────────────────────────────────────────────────
+// LEDGER STATE
+// ─────────────────────────────────────────────────────────────
+
+// Asset Registry
+export ledger assetCount: Counter;
+export ledger assets: Map<Uint<64>, Asset>;
+export ledger commitments: Map<Bytes<32>, Boolean>;
+
+// Ownership
+export ledger ownershipCommitments: Map<Uint<64>, Bytes<32>>;
+
+// ─────────────────────────────────────────────────────────────
+// WITNESSES
+// ─────────────────────────────────────────────────────────────
+
+witness creatorSecretKey(): Bytes<32>;
+witness ownerSecretKey(): Bytes<32>;
+
+// ─────────────────────────────────────────────────────────────
+// HELPER CIRCUITS
+// ─────────────────────────────────────────────────────────────
+
+// Derive creator public key
+circuit deriveCreatorPublicKey(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>(
+    [pad(32, "zera:creator:pubkey"), sk]
+  );
+}
+
+// Derive owner public key
+circuit deriveOwnerPublicKey(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>(
+    [pad(32, "zera:pk:v1"), sk]
+  );
+}
+
+// Asset commitment
+circuit computeCommitment(assetHash: Bytes<32>, creatorPublicKey: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<3, Bytes<32>>>(
+    [pad(32, "zera:asset:commitment"), assetHash, creatorPublicKey]
+  );
+}
+
+// Ownership commitment
+circuit computeOwnershipCommitment(pk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>(
+    [pad(32, "zera:ownership:commitment"), pk]
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// ASSET REGISTRY LOGIC
+// ─────────────────────────────────────────────────────────────
+
+export circuit registerAsset(
+  assetHash: Bytes<32>,
+  metadataHash: Bytes<32>,
+  timestamp: Uint<64>
+): [] {
+
+  // Validation
+  assert(assetHash != pad(32, "0"), "Invalid asset hash");
+  assert(metadataHash != pad(32, "0"), "Invalid metadata hash");
+  assert(timestamp > 0, "Invalid timestamp");
+
+  // Creator identity
+  const sk = creatorSecretKey();
+  const cpk = deriveCreatorPublicKey(sk);
+
+  // Commitment
+  const commitment = computeCommitment(assetHash, cpk);
+
+  // Prevent duplicates
+  assert(!commitments.member(disclose(commitment)), "Asset already registered");
+
+  commitments.insert(disclose(commitment), disclose(true));
+
+  // Generate ID
+  const id = assetCount.read();
+
+  // Store asset
+  assets.insert(
+    disclose(id),
+    disclose(Asset {
+      creatorPublicKey: disclose(cpk),
+      assetHash:        disclose(assetHash),
+      metadataHash:     disclose(metadataHash),
+      timestamp:        disclose(timestamp)
+    })
+  );
+
+  // Increment counter
+  assetCount.increment(1);
+}
+
+// Verify asset authenticity
+export circuit verifyAsset(
+  assetHash: Bytes<32>,
+  creatorPublicKey: Bytes<32>
+): Boolean {
+  const commitment = computeCommitment(assetHash, creatorPublicKey);
+  return commitments.member(disclose(commitment));
+}
+
+// Check existence
+export circuit assetExists(id: Uint<64>): Boolean {
+  return assets.member(disclose(id));
+}
+
+// Get asset
+export circuit getAsset(id: Uint<64>): Asset {
+  assert(assets.member(disclose(id)), "Asset does not exist");
+  return assets.lookup(disclose(id));
+}
+
+// ─────────────────────────────────────────────────────────────
+// OWNERSHIP LOGIC
+// ─────────────────────────────────────────────────────────────
+
+// Assign ownership
+export circuit assignOwnership(assetId: Uint<64>): [] {
+
+  // Ensure asset exists
+  assert(assets.member(disclose(assetId)), "Asset does not exist");
+
+  // Prevent overwrite
+  assert(!ownershipCommitments.member(disclose(assetId)), "Ownership already assigned");
+
+  const sk = ownerSecretKey();
+  const pk = deriveOwnerPublicKey(sk);
+  const commitment = computeOwnershipCommitment(pk);
+
+  ownershipCommitments.insert(disclose(assetId), disclose(commitment));
+}
+
+// Transfer ownership
+export circuit transferOwnership(
+  assetId: Uint<64>,
+  newOwnerPublicKey: Bytes<32>
+): [] {
+
+  // Ensure asset exists
+  assert(assets.member(disclose(assetId)), "Asset does not exist");
+
+  // Ensure ownership exists
+  assert(ownershipCommitments.member(disclose(assetId)), "No ownership record");
+
+  // Validate new owner key
+  assert(newOwnerPublicKey != pad(32, "0"), "Invalid new owner key");
+
+  // Verify current owner
+  const sk = ownerSecretKey();
+  const callerPk = deriveOwnerPublicKey(sk);
+  const callerCommitment = computeOwnershipCommitment(callerPk);
+
+  assert(
+    ownershipCommitments.lookup(disclose(assetId)) == callerCommitment,
+    "Caller is not the owner"
+  );
+
+  // Assign new owner
+  const newCommitment = computeOwnershipCommitment(newOwnerPublicKey);
+
+  ownershipCommitments.insert(
+    disclose(assetId),
+    disclose(newCommitment)
+  );
+}
+
+// Verify ownership
+export circuit verifyOwnership(
+  assetId: Uint<64>,
+  publicKey: Bytes<32>
+): Boolean {
+
+  if (!ownershipCommitments.member(disclose(assetId))) {
+    return false;
+  }
+
+  const commitment = computeOwnershipCommitment(publicKey);
+
+  return ownershipCommitments.lookup(disclose(assetId)) == commitment;
 }
