@@ -1,0 +1,51 @@
+{
+  "name": "hello-world-local",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "test": "NODE_OPTIONS='--experimental-vm-modules' vitest run",
+    "test:local": "MIDNIGHT_NETWORK=local npm test",
+    "env:up": "docker compose up -d --wait",
+    "env:down": "docker compose down",
+    "validate": "npm run env:up && npm run test:local; npm run env:down",
+    "deploy": "NODE_OPTIONS='--max-old-space-size=4096' MIDNIGHT_NETWORK=preprod npx tsx src/deploy.ts",
+    "compile": "compact compile contracts/main.compact managed/zera"
+  },
+  "dependencies": {
+    "@midnight-ntwrk/compact-runtime": "0.15.0",
+    "@midnight-ntwrk/ledger-v8": "8.0.3",
+    "@midnight-ntwrk/midnight-js-contracts": "4.0.2",
+    "@midnight-ntwrk/midnight-js-http-client-proof-provider": "4.0.2",
+    "@midnight-ntwrk/midnight-js-indexer-public-data-provider": "4.0.2",
+    "@midnight-ntwrk/midnight-js-level-private-state-provider": "4.0.2",
+    "@midnight-ntwrk/midnight-js-network-id": "4.0.2",
+    "@midnight-ntwrk/midnight-js-node-zk-config-provider": "4.0.2",
+    "@midnight-ntwrk/midnight-js-types": "4.0.2",
+    "@midnight-ntwrk/midnight-js-utils": "4.0.2",
+    "@midnight-ntwrk/testkit-js": "4.0.2",
+    "@midnight-ntwrk/wallet-sdk-facade": "3.0.0",
+    "axios": "^1.13.6",
+    "pino": "^9.0.0",
+    "pino-pretty": "^13.0.0",
+    "rxjs": "^7.8.2",
+    "testcontainers": "^11.13.0",
+    "ws": "^8.14.2"
+  },
+  "devDependencies": {
+    "@midnight-ntwrk/midnight-js-compact": "4.0.2",
+    "@types/node": "^22.0.0",
+    "@types/ws": "^8.5.9",
+    "tsx": "^4.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  },
+  "overrides": {
+    "@midnight-ntwrk/ledger-v8": "8.0.3",
+    "@midnight-ntwrk/midnight-js-network-id": "4.0.2",
+    "@midnight-ntwrk/compact-runtime": "0.15.0"
+  }
+}
