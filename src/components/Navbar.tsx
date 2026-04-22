@@ -2,40 +2,66 @@
 
 import Link from "next/link";
 import { Button } from "./ui/Button";
+import { Input } from "./ui/Input";
+import { Search, User, ShoppingCart, Menu } from "lucide-react";
 
 export function Navbar() {
   return (
-    <nav className="absolute top-0 left-0 w-full z-50 px-8 py-6 flex items-center justify-between">
-      
-      {/* Left - Logo */}
-      <div className="flex items-center">
-        <Link href="/" className="flex items-center gap-3 group">
+    <div className="w-full flex flex-col border-b border-glass-border bg-black sticky top-0 z-50">
+      {/* Top Navbar */}
+      <nav className="w-full px-4 md:px-8 py-4 flex items-center justify-between gap-6">
+        
+        {/* Left - Logo */}
+        <Link href="/" className="flex items-center gap-3 group shrink-0">
           <div className="w-10 h-10 rounded-xl bg-lime flex items-center justify-center transition-transform group-hover:scale-105">
             <span className="text-black font-bold text-xl font-grotesk tracking-tighter">Z</span>
           </div>
-          <span className="text-2xl font-bold tracking-tighter text-text-primary uppercase">ZERA</span>
+          <span className="hidden sm:block text-2xl font-bold tracking-tighter text-text-primary uppercase">ZERA</span>
         </Link>
-      </div>
 
-      {/* Center - Pill Links (Hidden on mobile) */}
-      <div className="hidden md:flex items-center space-x-8 px-8 py-3 rounded-full bg-glass-white backdrop-blur-md border border-glass-border">
-        <Link href="/" className="text-sm font-medium text-text-secondary hover:text-lime transition-colors">Explore</Link>
-        <Link href="#" className="text-sm font-medium text-text-secondary hover:text-lime transition-colors">Create</Link>
-        <Link href="/registry" className="text-sm font-medium text-text-secondary hover:text-lime transition-colors">Registry</Link>
-        <Link href="#" className="text-sm font-medium text-text-secondary hover:text-lime transition-colors">Activity</Link>
-      </div>
-
-      {/* Right - Actions */}
-      <div className="flex items-center space-x-6">
-        <div className="hidden lg:flex items-center gap-2 font-mono uppercase tracking-widest text-[10px] text-text-secondary">
-          <span>Sys.Online</span>
-          <div className="w-1.5 h-1.5 rounded-full bg-lime animate-pulse-fast"></div>
+        {/* Center - Search Bar */}
+        <div className="flex-1 max-w-3xl relative hidden md:block">
+          <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+            <Search className="h-5 w-5 text-text-secondary" />
+          </div>
+          <input 
+            type="text" 
+            placeholder="Search items, collections, and accounts" 
+            className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-12 pr-12 text-text-primary placeholder-text-secondary focus:outline-none focus:ring-1 focus:ring-lime focus:border-lime transition-all font-mono text-sm"
+          />
+          <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none">
+             <div className="px-2 py-1 rounded-md bg-white/10 text-text-secondary text-xs font-mono border border-white/10">/</div>
+          </div>
         </div>
-        <Button variant="primary" className="hidden sm:inline-flex rounded-full px-6 py-2.5 text-sm">
-          Connect Wallet
-        </Button>
+
+        {/* Right - Actions */}
+        <div className="flex items-center gap-4 shrink-0">
+          <Button variant="primary" className="hidden lg:flex px-6 h-12">
+            Connect Wallet
+          </Button>
+          <button className="p-3 rounded-xl hover:bg-white/10 transition-colors hidden sm:block border border-transparent hover:border-white/10">
+            <User className="w-6 h-6 text-text-primary" />
+          </button>
+          <button className="p-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors relative">
+            <ShoppingCart className="w-6 h-6 text-text-primary" />
+            <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-lime border-2 border-black"></span>
+          </button>
+          <button className="p-3 rounded-xl hover:bg-white/10 transition-colors md:hidden">
+            <Menu className="w-6 h-6 text-text-primary" />
+          </button>
+        </div>
+      </nav>
+
+      {/* Bottom Sub-Nav (Categories) */}
+      <div className="w-full px-4 md:px-8 py-3 flex items-center gap-8 overflow-x-auto no-scrollbar font-grotesk font-semibold text-text-secondary border-t border-white/5">
+        <Link href="#" className="text-text-primary whitespace-nowrap hover:text-lime transition-colors">All</Link>
+        <Link href="#" className="whitespace-nowrap hover:text-lime transition-colors">Art</Link>
+        <Link href="#" className="whitespace-nowrap hover:text-lime transition-colors">Gaming</Link>
+        <Link href="#" className="whitespace-nowrap hover:text-lime transition-colors">Memberships</Link>
+        <Link href="#" className="whitespace-nowrap hover:text-lime transition-colors">PFPs</Link>
+        <Link href="#" className="whitespace-nowrap hover:text-lime transition-colors">Photography</Link>
+        <Link href="#" className="whitespace-nowrap hover:text-lime transition-colors">Music</Link>
       </div>
-      
-    </nav>
+    </div>
   );
 }
