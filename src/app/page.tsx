@@ -1,152 +1,130 @@
 import { Button } from "../components/ui/Button";
 import { Badge } from "../components/ui/Badge";
-import { topCollections, notableDrops, resources } from "../data/mockData";
-import { CheckCircle2 } from "lucide-react";
+import { Card } from "../components/ui/Card";
+import { topCollections, notableDrops } from "../data/mockData";
+import { CheckCircle2, ArrowRight } from "lucide-react";
+import Link from "next/link";
 
 export default function Home() {
   const leftColumn = topCollections.slice(0, 5);
   const rightColumn = topCollections.slice(5, 10);
 
   return (
-    <div className="w-full flex flex-col gap-16 pb-24">
+    <div className="w-full max-w-[1600px] mx-auto p-6 md:p-10 pb-24 space-y-16">
       
-      {/* Featured Banner / Hero */}
-      <section className="w-full px-4 md:px-8 mt-6">
-        <div className="w-full h-[400px] md:h-[500px] relative rounded-3xl overflow-hidden group cursor-pointer border border-white/10">
-          <img 
-            src="https://images.unsplash.com/photo-1614729939124-032f0b56c9ce?w=1600&h=600&fit=crop" 
-            alt="Featured Drop" 
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
-          
-          <div className="absolute bottom-0 left-0 p-8 w-full">
-            <Badge className="bg-lime text-black border-none mb-4 font-bold" showDot>LIVE_DROP</Badge>
-            <h1 className="text-4xl md:text-5xl font-grotesk font-bold text-white mb-2">The Obsidian Sequence</h1>
-            <p className="text-white/80 font-mono text-sm max-w-xl mb-6">By 0xCreator. A curated set of 999 provably rare digital artifacts.</p>
-            <Button variant="secondary" className="bg-white text-black hover:bg-gray-200 border-none font-grotesk">View Drop</Button>
+      {/* App Dashboard Hero */}
+      <section className="relative w-full rounded-[2.5rem] bg-obsidian border border-white/5 overflow-hidden group">
+        <div className="absolute inset-0 bg-grid-pattern bg-grid-60 opacity-20 mix-blend-overlay pointer-events-none"></div>
+        <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-lime/10 blur-[120px] rounded-full pointer-events-none -translate-y-1/2 translate-x-1/3"></div>
+        
+        <div className="relative z-10 p-12 lg:p-20 flex flex-col lg:flex-row items-center gap-12">
+          <div className="flex-1 space-y-8">
+            <Badge className="bg-lime/10 text-lime border-none" showDot>CREATOR_STUDIO_LIVE</Badge>
+            <h1 className="text-5xl lg:text-7xl font-grotesk font-bold uppercase tracking-tighter leading-[0.9]">
+              Verified Digital <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-white/50">Asset Registry</span>
+            </h1>
+            <p className="font-mono text-text-secondary max-w-lg leading-relaxed">
+              Mint, manage, and trade verified digital assets—from music rights to gaming items—with Zero-Knowledge privacy preserving infrastructure.
+            </p>
+            <div className="flex flex-wrap gap-4 pt-4">
+              <Link href="/mint">
+                <Button variant="primary" size="lg" className="rounded-full gap-2">
+                  Mint Digital Asset <ArrowRight className="w-4 h-4" />
+                </Button>
+              </Link>
+              <Link href="/explore">
+                <Button variant="secondary" size="lg" className="rounded-full bg-white/5 border-white/10">
+                  Explore Markets
+                </Button>
+              </Link>
+            </div>
+          </div>
+
+          <div className="flex-1 w-full max-w-md hidden lg:block">
+            <div className="relative aspect-[4/5] rounded-[2rem] overflow-hidden border border-white/10 shadow-[0_0_50px_rgba(204,255,0,0.1)] group-hover:shadow-[0_0_80px_rgba(204,255,0,0.2)] transition-shadow duration-700">
+               <img src="https://images.unsplash.com/photo-1614729939124-032f0b56c9ce?w=800&fit=crop" className="w-full h-full object-cover" alt="Hero Featured" />
+               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
+               <div className="absolute bottom-0 left-0 w-full p-8">
+                 <Badge variant="verified" className="mb-4 backdrop-blur-md bg-black/50" showDot>MUSIC_RIGHTS</Badge>
+                 <h3 className="font-grotesk font-bold text-3xl mb-2">The Obsidian Sequence</h3>
+                 <p className="font-mono text-xs text-text-secondary">By 0xCreator · Verified Master Recording</p>
+               </div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Trending / Top Collections Tables */}
-      <section className="w-full px-4 md:px-8">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
-          <div className="flex items-center gap-6 border-b border-white/10 pb-2">
-             <button className="text-xl font-grotesk font-bold text-text-primary border-b-2 border-text-primary pb-2 -mb-[10px]">Trending</button>
-             <button className="text-xl font-grotesk font-bold text-text-secondary hover:text-text-primary pb-2 -mb-[10px]">Top</button>
+      {/* Market Data */}
+      <section>
+        <div className="flex items-end justify-between mb-8">
+          <div>
+            <h2 className="text-3xl font-grotesk font-bold uppercase tracking-tight">Market Activity</h2>
+            <p className="font-mono text-xs text-text-secondary mt-2">Top volume across all verified registries (24h)</p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="secondary" className="h-10 px-4 text-sm font-mono bg-white/5 rounded-xl border-white/10">24h</Button>
-            <Button variant="secondary" className="h-10 px-4 text-sm font-mono bg-white/5 rounded-xl border-white/10">View All</Button>
-          </div>
+          <Link href="/registry">
+             <Button variant="ghost" className="font-mono text-xs hidden sm:flex">View Registry</Button>
+          </Link>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-2">
-          
-          {/* Left Column (1-5) */}
-          <div className="flex flex-col">
-            <div className="flex text-xs font-mono text-text-secondary uppercase pb-4 px-2 border-b border-white/5 mb-2">
-              <span className="w-10 text-center">#</span>
-              <span className="flex-1">Collection</span>
-              <span className="w-24 text-right">Floor Price</span>
-              <span className="w-24 text-right">Volume</span>
-            </div>
-            {leftColumn.map((col) => (
-              <div key={col.rank} className="flex items-center p-3 rounded-xl hover:bg-white/5 transition-colors cursor-pointer group border border-transparent hover:border-white/10">
-                <span className="w-8 text-center font-bold text-text-secondary">{col.rank}</span>
-                <div className="flex-1 flex items-center gap-4">
-                  <div className="relative">
-                    <img src={col.avatar} className="w-14 h-14 rounded-xl object-cover border border-white/10" alt={col.name} />
-                    {col.verified && (
-                      <div className="absolute -bottom-1 -right-1 bg-black rounded-full border border-black">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-glow fill-emerald-glow/20" />
-                      </div>
-                    )}
-                  </div>
-                  <span className="font-grotesk font-bold text-base group-hover:text-lime transition-colors">{col.name}</span>
-                </div>
-                <div className="w-24 text-right">
-                  <span className="font-mono text-sm">{col.floor}</span>
-                </div>
-                <div className="w-24 text-right flex flex-col items-end">
-                  <span className="font-mono text-sm">{col.volume}</span>
-                  <span className={`font-mono text-xs ${col.change.startsWith('+') ? 'text-emerald-glow' : 'text-red-500'}`}>{col.change}</span>
-                </div>
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-x-16 gap-y-4">
+          {[leftColumn, rightColumn].map((col, idx) => (
+            <div key={idx} className="flex flex-col">
+              <div className="flex text-[10px] font-mono text-text-muted uppercase tracking-widest pb-4 px-2 border-b border-white/5 mb-2">
+                <span className="w-8 text-center">#</span>
+                <span className="flex-1">Collection</span>
+                <span className="w-24 text-right">Floor Price</span>
+                <span className="w-24 text-right">Volume</span>
               </div>
-            ))}
-          </div>
-
-          {/* Right Column (6-10) */}
-          <div className="flex flex-col">
-            <div className="flex text-xs font-mono text-text-secondary uppercase pb-4 px-2 border-b border-white/5 mb-2">
-              <span className="w-10 text-center">#</span>
-              <span className="flex-1">Collection</span>
-              <span className="w-24 text-right">Floor Price</span>
-              <span className="w-24 text-right">Volume</span>
-            </div>
-            {rightColumn.map((col) => (
-              <div key={col.rank} className="flex items-center p-3 rounded-xl hover:bg-white/5 transition-colors cursor-pointer group border border-transparent hover:border-white/10">
-                <span className="w-8 text-center font-bold text-text-secondary">{col.rank}</span>
-                <div className="flex-1 flex items-center gap-4">
-                  <div className="relative">
-                    <img src={col.avatar} className="w-14 h-14 rounded-xl object-cover border border-white/10" alt={col.name} />
-                    {col.verified && (
-                      <div className="absolute -bottom-1 -right-1 bg-black rounded-full border border-black">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-glow fill-emerald-glow/20" />
-                      </div>
-                    )}
+              {col.map((item) => (
+                <Link href={`/collections/${item.name.toLowerCase().replace(/ /g, '-')}`} key={item.rank} className="flex items-center p-3 rounded-2xl hover:bg-white/5 transition-colors group cursor-pointer">
+                  <span className="w-8 text-center font-mono text-xs font-bold text-text-secondary">{item.rank}</span>
+                  <div className="flex-1 flex items-center gap-4 pl-2">
+                    <div className="relative">
+                      <img src={item.avatar} className="w-12 h-12 rounded-xl object-cover border border-white/10" alt={item.name} />
+                      {item.verified && (
+                        <div className="absolute -bottom-1 -right-1 bg-obsidian rounded-full border border-obsidian">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-glow fill-emerald-glow/20" />
+                        </div>
+                      )}
+                    </div>
+                    <span className="font-grotesk font-bold text-sm md:text-base group-hover:text-lime transition-colors">{item.name}</span>
                   </div>
-                  <span className="font-grotesk font-bold text-base group-hover:text-lime transition-colors">{col.name}</span>
-                </div>
-                <div className="w-24 text-right">
-                  <span className="font-mono text-sm">{col.floor}</span>
-                </div>
-                <div className="w-24 text-right flex flex-col items-end">
-                  <span className="font-mono text-sm">{col.volume}</span>
-                  <span className={`font-mono text-xs ${col.change.startsWith('+') ? 'text-emerald-glow' : 'text-red-500'}`}>{col.change}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-
-        </div>
-      </section>
-
-      {/* Notable Collections Grid */}
-      <section className="w-full px-4 md:px-8 mt-8">
-        <h2 className="text-2xl font-grotesk font-bold mb-6">Notable Collections</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {notableDrops.map((drop, i) => (
-            <div key={i} className="group flex flex-col rounded-2xl bg-white/5 border border-white/10 overflow-hidden cursor-pointer hover:-translate-y-1 hover:border-lime/30 transition-all duration-300 hover:shadow-[0_8px_30px_rgba(204,255,0,0.1)]">
-               <div className="h-40 w-full relative overflow-hidden">
-                 <img src={drop.banner} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-transform duration-500 group-hover:scale-105" alt="Banner" />
-               </div>
-               <div className="relative p-5 pt-0 flex flex-col items-start bg-obsidian flex-1">
-                 <div className="relative -mt-8 mb-3 rounded-xl p-1 bg-obsidian border border-white/10">
-                   <img src={drop.avatar} className="w-16 h-16 rounded-lg object-cover" alt="Avatar" />
-                 </div>
-                 <h3 className="font-grotesk font-bold text-lg mb-1 group-hover:text-lime transition-colors flex items-center gap-1">
-                   {drop.name} <CheckCircle2 className="w-4 h-4 text-emerald-glow" />
-                 </h3>
-                 <p className="text-sm font-mono text-text-secondary line-clamp-2">{drop.description}</p>
-               </div>
+                  <div className="w-24 text-right">
+                    <span className="font-mono text-sm">{item.floor}</span>
+                  </div>
+                  <div className="w-24 text-right flex flex-col items-end">
+                    <span className="font-mono text-sm">{item.volume}</span>
+                    <span className={`font-mono text-[10px] mt-0.5 ${item.change.startsWith('+') ? 'text-emerald-glow' : 'text-red-500'}`}>{item.change}</span>
+                  </div>
+                </Link>
+              ))}
             </div>
           ))}
         </div>
       </section>
 
-      {/* NFT 101 Resources */}
-      <section className="w-full px-4 md:px-8 mt-8">
-        <h2 className="text-2xl font-grotesk font-bold mb-6">NFT 101</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {resources.map((res, i) => (
-            <div key={i} className="group relative rounded-2xl overflow-hidden cursor-pointer border border-white/10 hover:border-lime/40 transition-colors h-48">
-              <img src={res.image} className="w-full h-full object-cover opacity-60 group-hover:opacity-40 transition-opacity duration-300" alt={res.title} />
-              <div className="absolute inset-0 p-6 flex flex-col justify-end bg-gradient-to-t from-black/90 to-transparent">
-                <h3 className="font-grotesk font-bold text-xl group-hover:text-lime transition-colors">{res.title}</h3>
-              </div>
-            </div>
+      {/* Notable Drops Grid */}
+      <section>
+        <h2 className="text-3xl font-grotesk font-bold uppercase tracking-tight mb-8">Notable Drops</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {notableDrops.map((drop, i) => (
+            <Link href={`/collections/${drop.name.toLowerCase().replace(/ /g, '-')}`} key={i} className="group">
+              <Card className="p-0 overflow-hidden bg-obsidian border-white/5 hover:border-lime/30 transition-all duration-300 hover:-translate-y-1">
+                 <div className="h-40 w-full relative overflow-hidden bg-black">
+                   <img src={drop.banner} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-transform duration-700 group-hover:scale-105" alt="Banner" />
+                 </div>
+                 <div className="p-6 pt-0 relative flex flex-col items-start bg-obsidian h-full">
+                   <div className="relative -mt-10 mb-4 rounded-2xl p-1 bg-obsidian border border-white/10">
+                     <img src={drop.avatar} className="w-16 h-16 rounded-xl object-cover" alt="Avatar" />
+                   </div>
+                   <h3 className="font-grotesk font-bold text-lg mb-2 group-hover:text-lime transition-colors flex items-center gap-1.5">
+                     {drop.name} <CheckCircle2 className="w-4 h-4 text-emerald-glow" />
+                   </h3>
+                   <p className="text-xs font-mono text-text-secondary line-clamp-2 leading-relaxed">{drop.description}</p>
+                 </div>
+              </Card>
+            </Link>
           ))}
         </div>
       </section>

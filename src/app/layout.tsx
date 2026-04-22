@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import { Navbar } from "../components/Navbar";
+import { Sidebar } from "../components/Sidebar";
+import { TopBar } from "../components/TopBar";
 
 const spaceGrotesk = Space_Grotesk({ 
   subsets: ["latin"],
@@ -26,12 +27,19 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning className="dark">
-      <body className={`${spaceGrotesk.variable} ${jetBrainsMono.variable} min-h-screen bg-black flex flex-col p-4 md:p-6 lg:p-8`}>
-        {/* Floating Shell Container */}
-        <div className="relative w-full max-w-[1600px] mx-auto min-h-[calc(100vh-4rem)] rounded-[2.5rem] ring-1 ring-white/10 shadow-2xl bg-obsidian_light overflow-hidden flex flex-col">
-          <Navbar />
-          <main className="flex-grow">{children}</main>
+      <body className={`${spaceGrotesk.variable} ${jetBrainsMono.variable} min-h-screen bg-black font-grotesk text-text-primary antialiased`}>
+        
+        <Sidebar />
+        
+        {/* Main Content Area */}
+        <div className="lg:pl-72 flex flex-col min-h-screen">
+          <TopBar />
+          
+          <main className="flex-1 w-full relative">
+            {children}
+          </main>
         </div>
+
       </body>
     </html>
   );

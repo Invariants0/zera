@@ -5,7 +5,7 @@ export const topCollections = [
   { rank: 4, name: "CloneX", floor: "5.1 ETH", volume: "1.8K ETH", change: "+2%", verified: true, avatar: "https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?w=100&h=100&fit=crop" },
   { rank: 5, name: "Pudgy Penguins", floor: "4.2 ETH", volume: "1.5K ETH", change: "+8%", verified: true, avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop" },
   { rank: 6, name: "Bored Ape Kennel Club", floor: "3.5 ETH", volume: "1.2K ETH", change: "-1%", verified: true, avatar: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&h=100&fit=crop" },
-  { rank: 7, name: "Meebits", floor: "2.8 ETH", volume: "900 ETH", change: "+15%", verified: true, avatar: "https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?w=100&h=100&fit=crop" },
+  { rank: 7, name: "Sound.xyz Memberships", floor: "2.8 ETH", volume: "900 ETH", change: "+15%", verified: true, avatar: "https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?w=100&h=100&fit=crop" },
   { rank: 8, name: "Cool Cats", floor: "2.1 ETH", volume: "850 ETH", change: "+4%", verified: true, avatar: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=100&h=100&fit=crop" },
   { rank: 9, name: "World of Women", floor: "1.5 ETH", volume: "600 ETH", change: "-3%", verified: true, avatar: "https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?w=100&h=100&fit=crop" },
   { rank: 10, name: "DeadFellaz", floor: "0.8 ETH", volume: "450 ETH", change: "+11%", verified: true, avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop" },
@@ -28,4 +28,11 @@ export const resources = [
 export const featuredAssets = [
   { id: "asset-001", title: "Quantum Core Alpha", creator: "0xKael", price: "2.4 ZERA", imageUrl: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80", badges: ["verified"] },
   { id: "asset-002", title: "Neon Nexus Orb", creator: "Institutional Vault", price: "15.0 ZERA", imageUrl: "https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?w=800&auto=format&fit=crop&q=80", badges: ["private"] },
+];
+
+export const registryData = [
+  { id: "ZRA-8492", creator: "0x7F...3A19", verification: "Verified", ownership: "Provable", compliance: "KYC-Tier-1", updated: "2 mins ago" },
+  { id: "ZRA-1102", creator: "0x2B...9C44", verification: "Pending", ownership: "Private", compliance: "Unrestricted", updated: "1 hour ago" },
+  { id: "ZRA-9934", creator: "Institution-A", verification: "Verified", ownership: "Provable", compliance: "Reg-D", updated: "5 hours ago" },
+  { id: "ZRA-3021", creator: "0x99...EE10", verification: "Verified", ownership: "Private", compliance: "KYC-Tier-2", updated: "1 day ago" },
 ];
