@@ -4,3 +4,9 @@
 /logs
 deployment.json
 /midnight-level-db
+
+# Next.js
+/.next/
+/out/
+build/
+.env*.local
