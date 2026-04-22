@@ -1,0 +1,41 @@
+# Rust build artifacts
+target/
+Cargo.lock
+
+# Environment files
+.env
+.env.local
+
+# Documentation
+*.md
+!README.md
+
+# Test files
+test-*.txt
+test-*.json
+*.log
+
+# Downloads
+downloads/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Scripts
+*.ps1
+*.sh
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Render
+render.yaml
