@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: zera-ipfs-api
+    runtime: docker
+    repo: https://github.com/Invariants0/zera.git
+    branch: main
+    rootDir: storage/ipfs
+    dockerfilePath: storage/ipfs/Dockerfile
+    envVars:
+      - key: PINATA_JWT
+        sync: false
+      - key: PORT
+        value: 10000
+      - key: RUST_LOG
+        value: info
+    healthCheckPath: /health
+    autoDeploy: true
