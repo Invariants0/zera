@@ -3,14 +3,13 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "./Button";
 
 const badgeVariants = cva(
-  "inline-flex items-center rounded-pill px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  "inline-flex items-center gap-2 rounded-full px-3 py-1 font-mono uppercase tracking-widest text-[10px] border",
   {
     variants: {
       variant: {
-        verified: "bg-accent-green/10 text-accent-green border border-accent-green/20",
-        private: "bg-secondary-500/10 text-secondary-500 border border-secondary-500/20",
-        compliant: "bg-primary-500/10 text-primary-500 border border-primary-500/20",
-        default: "bg-surface_alt text-text_secondary border border-border",
+        verified: "bg-emerald-glow/10 text-emerald-glow border-emerald-glow/20",
+        private: "bg-lime/10 text-lime border-lime/20",
+        default: "bg-glass-white text-text-secondary border-glass-border",
       },
     },
     defaultVariants: {
@@ -21,11 +20,22 @@ const badgeVariants = cva(
 
 export interface BadgeProps
   extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof badgeVariants> {}
+    VariantProps<typeof badgeVariants> {
+  showDot?: boolean;
+}
 
-function Badge({ className, variant, ...props }: BadgeProps) {
+function Badge({ className, variant, showDot = false, children, ...props }: BadgeProps) {
   return (
-    <div className={cn(badgeVariants({ variant }), className)} {...props} />
+    <div className={cn(badgeVariants({ variant }), className)} {...props}>
+      {showDot && (
+        <div className={cn("w-1.5 h-1.5 rounded-full animate-pulse-fast", {
+          "bg-emerald-glow": variant === "verified",
+          "bg-lime": variant === "private",
+          "bg-text-secondary": variant === "default",
+        })}></div>
+      )}
+      {children}
+    </div>
   );
 }
 

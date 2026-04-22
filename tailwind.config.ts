@@ -1,7 +1,6 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
-  darkMode: "class",
   content: [
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -9,95 +8,54 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        grotesk: ["var(--font-space-grotesk)", "sans-serif"],
+        mono: ["var(--font-jetbrains-mono)", "monospace"],
+      },
       colors: {
-        primary: {
-          50: "#eff6ff",
-          100: "#dbeafe",
-          200: "#bfdbfe",
-          300: "#93c5fd",
-          400: "#60a5fa",
-          500: "#3b82f6",
-          600: "#2563eb",
-          700: "#1d4ed8",
-          800: "#1e40af",
-          900: "#1e3a8a",
+        obsidian: "#0a0a0a",
+        obsidian_light: "#0c0c0c",
+        lime: {
+          DEFAULT: "#ccff00",
+          hover: "#d4ff33",
+          glow: "rgba(204, 255, 0, 0.3)",
         },
-        secondary: {
-          50: "#f5f3ff",
-          100: "#ede9fe",
-          200: "#ddd6fe",
-          300: "#c4b5fd",
-          400: "#a78bfa",
-          500: "#8b5cf6",
-          600: "#7c3aed",
-          700: "#6d28d9",
-          800: "#5b21b6",
-          900: "#4c1d95",
+        emerald: {
+          glow: "#10b981",
         },
-        neutral: {
-          50: "#f8fafc",
-          100: "#f1f5f9",
-          200: "#e2e8f0",
-          300: "#cbd5e1",
-          400: "#94a3b8",
-          500: "#64748b",
-          600: "#475569",
-          700: "#334155",
-          800: "#1e293b",
-          900: "#0f172a",
-          950: "#020617",
+        glass: {
+          white: "rgba(255, 255, 255, 0.03)",
+          border: "rgba(255, 255, 255, 0.1)",
         },
-        accent: {
-          green: "#22c55e",
-          amber: "#f59e0b",
-          red: "#ef4444",
-          teal: "#14b8a6",
+        text: {
+          primary: "#ebebeb",
+          secondary: "rgba(235, 235, 235, 0.6)",
+          muted: "rgba(235, 235, 235, 0.3)",
         },
-        background: "var(--background)",
-        surface: "var(--surface)",
-        surface_alt: "var(--surface-alt)",
-        text_primary: "var(--text-primary)",
-        text_secondary: "var(--text-secondary)",
-        border: "var(--border)",
       },
       borderRadius: {
-        xs: "6px",
-        sm: "10px",
-        md: "14px",
-        lg: "18px",
-        xl: "24px",
-        "2xl": "32px",
-        pill: "999px",
+        "2.5rem": "2.5rem",
+        "1.5rem": "1.5rem",
       },
-      spacing: {
-        base: "4px",
-        scale: {
-          4: "4px",
-          8: "8px",
-          12: "12px",
-          16: "16px",
-          20: "20px",
-          24: "24px",
-          32: "32px",
-          40: "40px",
-          48: "48px",
-          64: "64px",
-          80: "80px",
+      backgroundImage: {
+        "grid-pattern":
+          "linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px)",
+      },
+      backgroundSize: {
+        "grid-60": "60px 60px",
+      },
+      animation: {
+        float: "float 6s ease-in-out infinite",
+        "pulse-fast": "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+      },
+      keyframes: {
+        float: {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-10px)" },
         },
       },
-      boxShadow: {
-        sm: "0 1px 2px rgba(0,0,0,.05)",
-        md: "0 8px 24px rgba(0,0,0,.08)",
-        lg: "0 20px 50px rgba(0,0,0,.12)",
-        glow: "0 0 0 1px rgba(59,130,246,.18), 0 8px 32px rgba(59,130,246,.18)",
-      },
       transitionTimingFunction: {
-        curve: "cubic-bezier(0.2, 0.8, 0.2, 1)",
-      },
-      transitionDuration: {
-        fast: "150ms",
-        normal: "220ms",
-        slow: "320ms",
+        curve: "cubic-bezier(0.4, 0, 0.2, 1)",
       },
     },
   },

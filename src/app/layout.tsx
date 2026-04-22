@@ -1,14 +1,22 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import { ThemeProvider } from "../components/ThemeProvider";
 import { Navbar } from "../components/Navbar";
 
-const inter = Inter({ subsets: ["latin"] });
+const spaceGrotesk = Space_Grotesk({ 
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+  variable: "--font-space-grotesk",
+});
+
+const jetBrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-jetbrains-mono",
+});
 
 export const metadata: Metadata = {
-  title: "ZERA | Verification-first digital asset marketplace",
-  description: "Provable Ownership. Private by Default.",
+  title: "ZERA | Provably Real. Privately Owned.",
+  description: "A futuristic verification-first digital asset marketplace.",
 };
 
 export default function RootLayout({
@@ -17,12 +25,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.className} min-h-screen flex flex-col`}>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+    <html lang="en" suppressHydrationWarning className="dark">
+      <body className={`${spaceGrotesk.variable} ${jetBrainsMono.variable} min-h-screen bg-black flex flex-col p-4 md:p-6 lg:p-8`}>
+        {/* Floating Shell Container */}
+        <div className="relative w-full max-w-[1600px] mx-auto min-h-[calc(100vh-4rem)] rounded-[2.5rem] ring-1 ring-white/10 shadow-2xl bg-obsidian_light overflow-hidden flex flex-col">
           <Navbar />
           <main className="flex-grow">{children}</main>
-        </ThemeProvider>
+        </div>
       </body>
     </html>
   );
