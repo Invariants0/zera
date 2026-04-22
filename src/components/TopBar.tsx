@@ -1,6 +1,7 @@
 "use client";
 
 import { Search, Bell, Menu } from "lucide-react";
+import Link from "next/link";
 import { Button } from "./ui/Button";
 
 export function TopBar() {
@@ -34,9 +35,16 @@ export function TopBar() {
           <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-lime border-2 border-obsidian"></span>
         </button>
         
-        <Button variant="primary" className="hidden sm:inline-flex h-10 px-6 text-xs rounded-full">
-          Connect Wallet
-        </Button>
+        <Link href="/mint">
+          <Button variant="primary" className="hidden sm:inline-flex h-10 px-6 text-xs rounded-full">
+            Start Tokenizing
+          </Button>
+        </Link>
+        <Link href="/explore">
+          <Button variant="secondary" className="hidden sm:inline-flex h-10 px-6 text-xs rounded-full bg-white/5 border-white/10">
+            Explore
+          </Button>
+        </Link>
 
         {/* User Dropdown Trigger */}
         <button className="w-10 h-10 rounded-full bg-gradient-to-br from-lime/20 to-emerald-glow/20 border border-white/10 overflow-hidden ml-2 hover:border-lime/50 transition-colors">
