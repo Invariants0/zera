@@ -17,9 +17,13 @@
     "env:down": "docker compose down",
     "validate": "npm run env:up && npm run test:local; npm run env:down",
     "deploy": "NODE_OPTIONS='--max-old-space-size=4096' MIDNIGHT_NETWORK=preprod npx tsx src/deploy.ts",
-    "compile": "compact compile contracts/main.compact managed/zera"
+    "compile": "compact compile contracts/main.compact managed/zera",
+    "type-check": "tsc --noEmit",
+    "format": "prettier --write \"src/**/*.{ts,tsx}\"",
+    "clean": "rm -rf .next node_modules/.cache"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.2.2",
     "@midnight-ntwrk/compact-runtime": "0.15.0",
     "@midnight-ntwrk/ledger-v8": "8.0.3",
     "@midnight-ntwrk/midnight-js-contracts": "4.0.2",
@@ -42,10 +46,14 @@
     "pino-pretty": "^13.0.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
+    "react-hook-form": "^7.73.1",
+    "react-hot-toast": "^2.6.0",
     "rxjs": "^7.8.2",
     "tailwind-merge": "^3.5.0",
     "testcontainers": "^11.13.0",
-    "ws": "^8.14.2"
+    "ws": "^8.14.2",
+    "zod": "^4.3.6",
+    "zustand": "^5.0.12"
   },
   "devDependencies": {
     "@midnight-ntwrk/midnight-js-compact": "4.0.2",
