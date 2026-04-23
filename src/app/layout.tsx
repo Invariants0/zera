@@ -3,6 +3,7 @@ import { Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Sidebar } from "../components/Sidebar";
 import { TopBar } from "../components/TopBar";
+import { ToastProvider } from "../components/ToastProvider";
 
 const spaceGrotesk = Space_Grotesk({ 
   subsets: ["latin"],
@@ -28,6 +29,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning className="dark">
       <body className={`${spaceGrotesk.variable} ${jetBrainsMono.variable} min-h-screen bg-black font-grotesk text-text-primary antialiased`}>
+        <ToastProvider />
         
         <Sidebar />
         
