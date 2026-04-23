@@ -1,10 +1,32 @@
 "use client";
 
-import { Search, Bell, Menu } from "lucide-react";
+import { Search, Bell, Menu, Wallet } from "lucide-react";
 import Link from "next/link";
 import { Button } from "./ui/Button";
+import { useWallet } from "../hooks/useWallet";
+import toast from "react-hot-toast";
 
 export function TopBar() {
+  const { walletAddress, isConnected, connectWallet, disconnectWallet } = useWallet();
+
+  const handleConnect = async () => {
+    try {
+      await connectWallet();
+      toast.success('Wallet connected successfully');
+    } catch (error) {
+      toast.error('Failed to connect wallet');
+    }
+  };
+
+  const handleDisconnect = () => {
+    disconnectWallet();
+    toast.success('Wallet disconnected');
+  };
+
+  const formatAddress = (address: string) => {
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  };
+
   return (
     <header className="sticky top-0 z-30 h-20 bg-obsidian/80 backdrop-blur-xl border-b border-white/5 px-8 flex items-center justify-between lg:justify-end">
       
@@ -35,13 +57,41 @@ export function TopBar() {
           <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-lime border-2 border-obsidian"></span>
         </button>
         
+        {/* Wallet Connection */}
+        {isConnected && walletAddress ? (
+          <div className="flex items-center gap-2">
+            <div className="hidden md:flex items-center gap-2 px-4 py-2 rounded-full bg-lime/10 border border-lime/30">
+              <Wallet className="w-4 h-4 text-lime" />
+              <span className="font-mono text-xs text-lime">{formatAddress(walletAddress)}</span>
+            </div>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={handleDisconnect}
+              className="hidden md:inline-flex text-xs"
+            >
+              Disconnect
+            </Button>
+          </div>
+        ) : (
+          <Button 
+            variant="primary" 
+            size="sm"
+            onClick={handleConnect}
+            className="gap-2"
+          >
+            <Wallet className="w-4 h-4" />
+            <span className="hidden sm:inline">Connect Wallet</span>
+          </Button>
+        )}
+        
         <Link href="/mint">
-          <Button variant="primary" className="hidden sm:inline-flex h-10 px-6 text-xs rounded-full">
+          <Button variant="primary" className="hidden lg:inline-flex h-10 px-6 text-xs rounded-full">
             Start Tokenizing
           </Button>
         </Link>
         <Link href="/explore">
-          <Button variant="secondary" className="hidden sm:inline-flex h-10 px-6 text-xs rounded-full bg-white/5 border-white/10">
+          <Button variant="secondary" className="hidden lg:inline-flex h-10 px-6 text-xs rounded-full bg-white/5 border-white/10">
             Explore
           </Button>
         </Link>
