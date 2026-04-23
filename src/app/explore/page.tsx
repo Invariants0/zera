@@ -1,14 +1,51 @@
+"use client";
+
+import { useState } from "react";
+import type React from "react";
 import { Card } from "../../components/ui/Card";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
-import { Search, Filter, ChevronDown, CheckCircle2, Lock, Heart } from "lucide-react";
-import { featuredAssets } from "../../data/mockData";
+import { Search, Filter, ChevronDown, CheckCircle2, Heart, Package } from "lucide-react";
+import { useAssets } from "../../hooks/useAssets";
+import { Loading, CardSkeleton } from "../../components/ui/Loading";
+import { EmptyState } from "../../components/ui/EmptyState";
 import Link from "next/link";
 
+const categories = ["All", "Art", "Music", "Gaming", "Memberships", "IP Licenses"];
+
 export default function Explore() {
-  // Let's create an array of 12 assets by repeating the mock data
-  const gridAssets = [...featuredAssets, ...featuredAssets, ...featuredAssets, ...featuredAssets, ...featuredAssets, ...featuredAssets];
+  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [verifiedOnly, setVerifiedOnly] = useState(true);
+  const [privateOnly, setPrivateOnly] = useState(true);
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.currentTarget.value);
+  };
+
+  const handleVerifiedChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setVerifiedOnly(e.currentTarget.checked);
+  };
+
+  const handlePrivateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPrivateOnly(e.currentTarget.checked);
+  };
+
+  const { assets, loading, error } = useAssets({
+    category: selectedCategory !== "All" ? selectedCategory.toLowerCase() : undefined,
+    verified: verifiedOnly,
+    private: privateOnly,
+    search: searchQuery || undefined,
+  });
+
+  const filteredAssets = assets.filter(asset => {
+    if (searchQuery) {
+      return asset.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+             asset.creator.toLowerCase().includes(searchQuery.toLowerCase());
+    }
+    return true;
+  });
 
   return (
     <div className="w-full flex flex-col min-h-screen">
@@ -18,14 +55,13 @@ export default function Explore() {
         <h1 className="text-3xl font-grotesk font-bold uppercase tracking-tight mb-6">Explore Assets</h1>
         
         <div className="flex flex-col sm:flex-row gap-4 justify-between">
-           {/* Mobile Filter Toggle */}
-           <Button variant="secondary" className="sm:hidden w-full gap-2 justify-center">
-             <Filter className="w-4 h-4" /> Filters
-           </Button>
-
            <div className="flex-1 w-full flex items-center gap-4 overflow-x-auto no-scrollbar">
-             {["All", "Art", "Music", "Gaming", "Memberships", "IP Licenses"].map((cat, i) => (
-               <button key={cat} className={`whitespace-nowrap px-4 py-2 rounded-full font-mono text-xs uppercase tracking-wider transition-colors ${i === 0 ? 'bg-white/10 text-text-primary' : 'bg-transparent text-text-secondary hover:text-text-primary hover:bg-white/5'}`}>
+             {categories.map((cat) => (
+               <button
+                 key={cat}
+                 onClick={() => setSelectedCategory(cat)}
+                 className={`whitespace-nowrap px-4 py-2 rounded-full font-mono text-xs uppercase tracking-wider transition-colors ${selectedCategory === cat ? 'bg-white/10 text-text-primary' : 'bg-transparent text-text-secondary hover:text-text-primary hover:bg-white/5'}`}
+               >
                  {cat}
                </button>
              ))}
@@ -34,7 +70,12 @@ export default function Explore() {
            <div className="flex items-center gap-4 shrink-0">
              <div className="relative w-64 hidden md:block">
                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-               <Input placeholder="Search assets..." className="pl-10 h-10 bg-obsidian border-white/10 rounded-xl" />
+               <Input
+                 placeholder="Search assets..."
+                 className="pl-10 h-10 bg-obsidian border-white/10 rounded-xl"
+                 value={searchQuery}
+                 onChange={handleSearchChange}
+               />
              </div>
              <Button variant="secondary" className="h-10 px-4 text-xs font-mono uppercase gap-2 bg-obsidian border-white/10">
                Sort: Trending <ChevronDown className="w-3 h-3" />
@@ -52,16 +93,22 @@ export default function Explore() {
              <h3 className="font-mono text-[10px] text-text-muted uppercase tracking-widest mb-4">Status</h3>
              <div className="space-y-3 font-mono text-sm">
                <label className="flex items-center gap-3 cursor-pointer group">
-                 <input type="checkbox" defaultChecked className="w-4 h-4 rounded border-white/20 bg-obsidian text-lime focus:ring-lime/50" />
+                 <input
+                   type="checkbox"
+                   checked={verifiedOnly}
+                   onChange={handleVerifiedChange}
+                   className="w-4 h-4 rounded border-white/20 bg-obsidian text-lime focus:ring-lime/50"
+                 />
                  <span className="group-hover:text-lime transition-colors">Verified Only</span>
                </label>
                <label className="flex items-center gap-3 cursor-pointer group">
-                 <input type="checkbox" defaultChecked className="w-4 h-4 rounded border-white/20 bg-obsidian text-lime focus:ring-lime/50" />
+                 <input
+                   type="checkbox"
+                   checked={privateOnly}
+                   onChange={handlePrivateChange}
+                   className="w-4 h-4 rounded border-white/20 bg-obsidian text-lime focus:ring-lime/50"
+                 />
                  <span className="group-hover:text-lime transition-colors">Privacy Enabled</span>
-               </label>
-               <label className="flex items-center gap-3 cursor-pointer group">
-                 <input type="checkbox" className="w-4 h-4 rounded border-white/20 bg-obsidian text-lime focus:ring-lime/50" />
-                 <span className="group-hover:text-lime transition-colors">Buy Now</span>
                </label>
              </div>
            </div>
@@ -80,50 +127,75 @@ export default function Explore() {
 
         {/* Main Grid */}
         <div className="flex-1 p-6 md:p-10 bg-obsidian_light">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-            {gridAssets.map((asset, i) => (
-              <Link href={`/assets/${asset.id}`} key={i} className="block group">
-                <Card className="p-0 overflow-hidden bg-obsidian border-white/5 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgba(204,255,0,0.1)] hover:border-lime/30 transition-all duration-300">
-                  <div className="h-64 relative bg-black">
-                    <img src={asset.imageUrl} alt={asset.title} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-500 group-hover:scale-105" />
-                    
-                    {/* Top Badges */}
-                    <div className="absolute top-4 left-4 flex gap-2">
-                      {asset.badges.map(b => (
-                        <Badge key={b} variant={b as any} showDot className="backdrop-blur-xl bg-black/60 border-white/10 px-2 py-0.5 text-[9px]">
-                          {b === 'verified' ? 'VERIFIED' : 'PRIVATE'}
-                        </Badge>
-                      ))}
+          {loading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+              {[...Array(10)].map((_, i) => (
+                <CardSkeleton key={i} />
+              ))}
+            </div>
+          ) : error ? (
+            <EmptyState
+              icon={Package}
+              title="Failed to Load Assets"
+              description={error}
+            />
+          ) : filteredAssets.length === 0 ? (
+            <EmptyState
+              icon={Package}
+              title="No Assets Found"
+              description="Try adjusting your filters or search query"
+            />
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+              {filteredAssets.map((asset) => (
+                <Link href={`/assets/${asset.id}`} key={asset.id} className="block group">
+                  <Card className="p-0 overflow-hidden bg-obsidian border-white/5 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgba(204,255,0,0.1)] hover:border-lime/30 transition-all duration-300">
+                    <div className="h-64 relative bg-black">
+                      <img src={asset.imageUrl} alt={asset.title} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-500 group-hover:scale-105" />
+                      
+                      {/* Top Badges */}
+                      <div className="absolute top-4 left-4 flex gap-2">
+                        {asset.verified && (
+                          <Badge variant="verified" showDot className="backdrop-blur-xl bg-black/60 border-white/10 px-2 py-0.5 text-[9px]">
+                            VERIFIED
+                          </Badge>
+                        )}
+                        {asset.private && (
+                          <Badge variant="private" showDot className="backdrop-blur-xl bg-black/60 border-white/10 px-2 py-0.5 text-[9px]">
+                            PRIVATE
+                          </Badge>
+                        )}
+                      </div>
+
+                      {/* Favorite Button */}
+                      <button className="absolute top-4 right-4 w-8 h-8 rounded-full bg-black/60 backdrop-blur-md border border-white/10 flex items-center justify-center text-text-secondary hover:text-white hover:bg-white/10 transition-colors">
+                        <Heart className="w-4 h-4" />
+                      </button>
                     </div>
 
-                    {/* Favorite Button */}
-                    <button className="absolute top-4 right-4 w-8 h-8 rounded-full bg-black/60 backdrop-blur-md border border-white/10 flex items-center justify-center text-text-secondary hover:text-white hover:bg-white/10 transition-colors">
-                      <Heart className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  <div className="p-5">
-                    <div className="flex items-center gap-1.5 mb-1">
-                       <span className="font-mono text-[10px] text-text-secondary uppercase">{asset.creator}</span>
-                       <CheckCircle2 className="w-3 h-3 text-emerald-glow" />
-                    </div>
-                    <h3 className="font-grotesk font-bold text-lg leading-tight group-hover:text-lime transition-colors truncate">{asset.title}</h3>
-                    
-                    <div className="mt-4 pt-4 border-t border-white/5 flex items-end justify-between font-mono">
-                      <div>
-                        <p className="text-[10px] text-text-muted uppercase tracking-widest mb-1">Price</p>
-                        <p className="text-sm font-bold text-lime">{asset.price}</p>
+                    <div className="p-5">
+                      <div className="flex items-center gap-1.5 mb-1">
+                         <span className="font-mono text-[10px] text-text-secondary uppercase truncate">{asset.creator}</span>
+                         {asset.verified && <CheckCircle2 className="w-3 h-3 text-emerald-glow flex-shrink-0" />}
                       </div>
-                      <div className="text-right">
-                        <p className="text-[10px] text-text-muted uppercase tracking-widest mb-1">Last Sale</p>
-                        <p className="text-xs text-text-secondary">2.1 ZERA</p>
+                      <h3 className="font-grotesk font-bold text-lg leading-tight group-hover:text-lime transition-colors truncate">{asset.title}</h3>
+                      
+                      <div className="mt-4 pt-4 border-t border-white/5 flex items-end justify-between font-mono">
+                        <div>
+                          <p className="text-[10px] text-text-muted uppercase tracking-widest mb-1">Price</p>
+                          <p className="text-sm font-bold text-lime">{asset.price}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[10px] text-text-muted uppercase tracking-widest mb-1">Last Sale</p>
+                          <p className="text-xs text-text-secondary">--</p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </Card>
-              </Link>
-            ))}
-          </div>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
 
       </div>
