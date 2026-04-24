@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type React from "react";
+import { useSearchParams } from "next/navigation";
 import { Card } from "../../components/ui/Card";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
@@ -15,17 +16,22 @@ import Link from "next/link";
 const categories = ["All", "Art", "Music", "Gaming", "Memberships", "IP Licenses"];
 
 export default function Explore() {
+  const searchParams = useSearchParams();
   const [selectedCategory, setSelectedCategory] = useState("All");
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(searchParams.get("search") ?? "");
   const [verifiedOnly, setVerifiedOnly] = useState(true);
   const [privateOnly, setPrivateOnly] = useState(true);
 
+  useEffect(() => {
+    setSearchQuery(searchParams.get("search") ?? "");
+  }, [searchParams]);
+
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(e.currentTarget.value);
+    setSearchQuery((e.target as HTMLInputElement).value);
   };
 
   const handleVerifiedChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setVerifiedOnly(e.currentTarget.checked);
+    setVerifiedOnly((e.target as HTMLInputElement).checked);
   };
 
   const handlePrivateChange = (e: React.ChangeEvent<HTMLInputElement>) => {

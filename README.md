@@ -1,6 +1,6 @@
-# Hello World - Midnight Network Smart Contract
+# Zera Asset Registry - Midnight Network Smart Contract
 
-A simple "Hello World" smart contract for the Midnight Network that stores and retrieves messages on the blockchain.
+An asset registry and ownership management smart contract for the Midnight Network that enables cryptographically-verified asset registration, verification, and ownership transfer on the blockchain.
 
 ## Prerequisites
 
@@ -93,10 +93,22 @@ Set the network via the `MIDNIGHT_NETWORK` environment variable:
 
 ## Smart Contract
 
-The contract (`contracts/main.compact`) provides:
+The contract (`contracts/main.compact`) provides an Asset Registry with the following features:
 
-- **Ledger State**: `message` - stores a string message
-- **Circuit**: `storeMessage(newMessage)` - updates the stored message
+### Ledger State
+- **assetCount**: Counter tracking total registered assets
+- **assets**: Map of registered assets indexed by ID
+- **commitments**: Map of asset commitments for duplicate prevention
+- **ownershipCommitments**: Map tracking asset ownership relationships
+
+### Circuits (Functions)
+- **registerAsset**(assetHash, metadataHash, timestamp) - Register a new asset
+- **verifyAsset**(assetHash, creatorPublicKey) - Verify asset authenticity
+- **assetExists**(id) - Check if an asset exists
+- **getAsset**(id) - Retrieve asset data
+- **assignOwnership**(assetId) - Assign ownership to an asset
+- **transferOwnership**(assetId, newOwnerPublicKey) - Transfer asset ownership
+- **verifyOwnership**(assetId, publicKey) - Verify asset ownership
 
 ## Available Scripts
 

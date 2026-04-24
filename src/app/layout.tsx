@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import { Sidebar } from "../components/Sidebar";
-import { TopBar } from "../components/TopBar";
+import { AppShell } from "../components/AppShell";
 import { ToastProvider } from "../components/ToastProvider";
 
 const spaceGrotesk = Space_Grotesk({ 
@@ -30,17 +29,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning className="dark">
       <body className={`${spaceGrotesk.variable} ${jetBrainsMono.variable} min-h-screen bg-black font-grotesk text-text-primary antialiased`}>
         <ToastProvider />
-        
-        <Sidebar />
-        
-        {/* Main Content Area */}
-        <div className="lg:pl-72 flex flex-col min-h-screen">
-          <TopBar />
-          
-          <main className="flex-1 w-full relative">
-            {children}
-          </main>
-        </div>
+        <AppShell>{children}</AppShell>
 
       </body>
     </html>

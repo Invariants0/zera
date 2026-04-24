@@ -3,10 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { 
-  Home, 
   Compass, 
-  Layers, 
-  Activity, 
   LayoutDashboard, 
   Briefcase, 
   Bookmark, 
@@ -15,8 +12,6 @@ import {
   ArrowRightLeft, 
   PlusCircle, 
   FolderPlus, 
-  SplitSquareHorizontal, 
-  Rocket, 
   MonitorPlay, 
   User, 
   Settings, 
@@ -28,10 +23,7 @@ const navSections = [
   {
     title: "Marketplace",
     items: [
-      { name: "Home", href: "/", icon: Home },
       { name: "Explore", href: "/explore", icon: Compass },
-      { name: "Collections", href: "/collections", icon: Layers },
-      { name: "Activity", href: "/activity", icon: Activity },
     ],
   },
   {
@@ -39,8 +31,6 @@ const navSections = [
     items: [
       { name: "Mint Asset", href: "/mint", icon: PlusCircle },
       { name: "Create Collection", href: "/create-collection", icon: FolderPlus },
-      { name: "Fractionalize Asset", href: "/fractionalize", icon: SplitSquareHorizontal },
-      { name: "Launch Drop", href: "/launch-drop", icon: Rocket },
       { name: "Creator Studio", href: "/creator-studio", icon: MonitorPlay },
     ],
   },
@@ -64,14 +54,18 @@ const navSections = [
     title: "Account",
     items: [
       { name: "Profile", href: "/profile", icon: User },
-      { name: "Settings", href: "/settings", icon: Settings },
       { name: "Wallet", href: "/wallet", icon: Wallet },
+      { name: "Settings", href: "/settings", icon: Settings },
     ],
   },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
+
+  if (pathname === "/") {
+    return null;
+  }
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-72 bg-obsidian_light border-r border-white/5 flex flex-col z-40 hidden lg:flex">
@@ -116,16 +110,6 @@ export function Sidebar() {
         ))}
       </div>
 
-      {/* System Status Bottom */}
-      <div className="p-6 border-t border-white/5 shrink-0">
-        <div className="flex items-center gap-3 bg-obsidian rounded-xl p-3 border border-white/5">
-           <div className="w-2 h-2 rounded-full bg-lime animate-pulse-fast"></div>
-           <div className="flex flex-col">
-             <span className="font-mono text-[10px] text-text-muted uppercase tracking-wider">System Status</span>
-             <span className="font-mono text-xs text-lime">All Systems Operational</span>
-           </div>
-        </div>
-      </div>
     </aside>
   );
 }

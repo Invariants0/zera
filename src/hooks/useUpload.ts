@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { uploadToIPFS, uploadMetadataToIPFS, validateFile, UploadProgress } from '../services/ipfs';
+import { uploadToIPFS, uploadMetadataToIPFS, validateFile } from '../services/ipfs';
+import type { UploadProgress } from '../services/ipfs';
 import { useAppStore } from '../store/appStore';
 
 export const useUpload = () => {

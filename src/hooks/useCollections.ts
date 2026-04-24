@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { getCollections, getCollectionById, Collection } from '../services/collections';
+import { getCollections, getCollectionById } from '../services/collections';
+import type { Collection } from '../services/collections';
 import { useAppStore } from '../store/appStore';
 
 export const useCollections = () => {
