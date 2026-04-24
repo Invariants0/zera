@@ -3,24 +3,24 @@ import { indexerPublicDataProvider } from '@midnight-ntwrk/midnight-js-indexer-p
 import { httpClientProofProvider } from '@midnight-ntwrk/midnight-js-http-client-proof-provider';
 import { NodeZkConfigProvider } from '@midnight-ntwrk/midnight-js-node-zk-config-provider';
 import { levelPrivateStateProvider } from '@midnight-ntwrk/midnight-js-level-private-state-provider';
-import { type MidnightWalletProvider } from './wallet.js';
+import { MidnightWalletProvider } from './wallet.js';
 import { type NetworkConfig } from './config.js';
 
-export type HelloWorldCircuits = 'storeMessage';
+export type ZeraCircuits = 'registerAsset' | 'verifyAsset' | 'assetExists' | 'getAsset' | 'assignOwnership' | 'transferOwnership' | 'verifyOwnership';
 
-export type HelloWorldProviders = MidnightProviders<any>;
+export type ZeraProviders = MidnightProviders<any>;
 
 export function buildProviders(
     wallet: MidnightWalletProvider,
     zkConfigPath: string,
     config: NetworkConfig,
-): HelloWorldProviders {
-    const zkConfigProvider = new NodeZkConfigProvider<HelloWorldCircuits>(zkConfigPath);
+): ZeraProviders {
+    const zkConfigProvider = new NodeZkConfigProvider<ZeraCircuits>(zkConfigPath);
 
     return {
         privateStateProvider: levelPrivateStateProvider({
-            privateStateStoreName: `hello-world-${Date.now()}`,
-            privateStoragePasswordProvider: () => 'Hello-World-Test-Password',
+            privateStateStoreName: `zera-asset-registry-${Date.now()}`,
+            privateStoragePasswordProvider: () => 'Zera-Asset-Registry-Test-Password',
             accountId: wallet.getCoinPublicKey(),
         }),
         publicDataProvider: indexerPublicDataProvider(
