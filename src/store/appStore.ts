@@ -5,6 +5,7 @@ import { type Collection } from '../services/collections';
 interface AppState {
   // Wallet state
   walletAddress: string | null;
+  walletBalance: string;
   isConnected: boolean;
   
   // Assets state
@@ -21,6 +22,7 @@ interface AppState {
   
   // Actions
   setWalletAddress: (address: string | null) => void;
+  setWalletBalance: (balance: string) => void;
   setIsConnected: (connected: boolean) => void;
   connectWallet: () => Promise<void>;
   disconnectWallet: () => void;
@@ -40,6 +42,7 @@ interface AppState {
 export const useAppStore = create<AppState>((set) => ({
   // Initial state
   walletAddress: null,
+  walletBalance: "0 tDUST",
   isConnected: false,
   uploadedAssets: [],
   ownedAssets: [],
@@ -50,34 +53,14 @@ export const useAppStore = create<AppState>((set) => ({
   
   // Wallet actions
   setWalletAddress: (address) => set({ walletAddress: address }),
+  setWalletBalance: (walletBalance) => set({ walletBalance }),
   setIsConnected: (connected) => set({ isConnected: connected }),
   
   connectWallet: async () => {
-    // STUB: Simulate wallet connection
-    console.log('[WALLET STUB] Connecting wallet...');
-    
-    // Simulate delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Generate mock wallet address
-    const mockAddress = `0x${Math.random().toString(16).substr(2, 40)}`;
-    
-    set({
-      walletAddress: mockAddress,
-      isConnected: true,
-    });
-    
-    // Store in localStorage
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('wallet_address', mockAddress);
-    }
-    
-    console.log('[WALLET STUB] Connected:', mockAddress);
+    throw new Error("Use the Midnight Lace connector flow from useWallet() instead of the store stub.");
   },
   
   disconnectWallet: () => {
-    console.log('[WALLET STUB] Disconnecting wallet...');
-    
     set({
       walletAddress: null,
       isConnected: false,
