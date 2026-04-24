@@ -1,11 +1,9 @@
 import { WebSocket } from 'ws';
-import { setNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
 import {
   deployContract,
 } from '@midnight-ntwrk/midnight-js-contracts';
 import { MidnightBech32m } from '@midnight-ntwrk/wallet-sdk-address-format';
 import { unshieldedToken } from '@midnight-ntwrk/ledger-v8';
-import { signData, signingKeyFromBip340, signatureVerifyingKey } from '@midnight-ntwrk/ledger-v8';
 import {
   ShieldedAddress,
   ShieldedCoinPublicKey,
@@ -15,10 +13,9 @@ import pino from 'pino';
 import { createInterface } from 'readline';
 import { randomBytes } from 'crypto';
 import * as Rx from 'rxjs';
-import { getUnshieldedSeed } from '@midnight-ntwrk/testkit-js';
 
 import { getConfig } from './config.js';
-import { MidnightWalletProvider } from './wallet.js';
+import { MidnightWalletProvider, syncWallet } from './wallet.js';
 import { buildProviders } from './providers.js';
 import { createTestWitnesses } from './witness.js';
 import {
@@ -78,6 +75,28 @@ const sleep = (ms: number): Promise<void> =>
     setTimeout(resolve, ms);
   });
 
+async function verifyProofServer(proofServerUrl: string, logger: any): Promise<boolean> {
+  try {
+    logger.info(`Verifying proof server at ${proofServerUrl}...`);
+    const response = await fetch(`${proofServerUrl}/version`, {
+      method: 'GET',
+      signal: AbortSignal.timeout(5000), // 5 second timeout
+    });
+    
+    if (response.ok) {
+      const version = await response.text();
+      logger.info(`Proof server is reachable. Version: ${version}`);
+      return true;
+    } else {
+      logger.warn(`Proof server returned status ${response.status}`);
+      return false;
+    }
+  } catch (err) {
+    logger.error(`Failed to reach proof server: ${err instanceof Error ? err.message : String(err)}`);
+    return false;
+  }
+}
+
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
   return await Promise.race([
     promise,
@@ -98,54 +117,28 @@ function isProgressStrictlyComplete(progress: unknown): boolean {
   return (candidate.isStrictlyComplete as () => boolean)();
 }
 
-async function waitForUnshieldedSync(logger: any, walletFacade: any, timeout = 300_000): Promise<Record<string, any>> {
-  logger.info('Waiting for unshielded wallet sync...');
-  let emissionCount = 0;
-  
-  return new Promise((resolve, reject) => {
-    const timeoutId = setTimeout(() => {
-      subscription.unsubscribe();
-      reject(new Error(`Unshielded wallet sync timeout after ${timeout}ms`));
-    }, timeout);
-
-    const subscription = walletFacade.state().subscribe({
-      next: (state: any) => {
-        emissionCount++;
-        const unshieldedSynced = isProgressStrictlyComplete(state.unshielded?.progress);
-        logger.info(
-          `Wallet sync [${emissionCount}]: shielded=${isProgressStrictlyComplete(state.shielded?.state?.progress)}, ` +
-          `unshielded=${unshieldedSynced}, ` +
-          `dust=${isProgressStrictlyComplete(state.dust?.state?.progress)}`,
-        );
-        
-        if (unshieldedSynced) {
-          clearTimeout(timeoutId);
-          subscription.unsubscribe();
-          resolve(state);
-        }
-      },
-      error: (err: any) => {
-        clearTimeout(timeoutId);
-        logger.error(`Unshielded wallet sync error: ${err}`);
-        reject(err);
-      }
-    });
-  });
-}
-
-async function waitForDustAvailable(walletFacade: any, logger: any, timeout = 120_000): Promise<void> {
-  logger.info('Checking wallet readiness (DUST generated on-demand)...');
-  logger.info(`Waiting up to ${timeout / 1000}s for DUST generation...`);
+async function waitForDustAvailable(walletFacade: any, logger: any, timeout = 180_000): Promise<void> {
+  logger.info('Waiting for DUST to be generated (this may take 30-60 seconds)...');
+  logger.info(`Timeout set to ${timeout / 1000}s`);
 
   // DUST is generated on-demand and required for transaction fees.
-  // Always honor timeout even if wallet state is temporarily unavailable.
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const startTime = Date.now();
+    let lastLogTime = startTime;
+    
     const checkInterval = setInterval(() => {
-      if (Date.now() - startTime > timeout) {
+      const elapsed = Date.now() - startTime;
+      
+      // Log progress every 10 seconds
+      if (Date.now() - lastLogTime > 10_000) {
+        logger.info(`Still waiting for DUST... (${Math.floor(elapsed / 1000)}s elapsed)`);
+        lastLogTime = Date.now();
+      }
+      
+      if (elapsed > timeout) {
         clearInterval(checkInterval);
-        logger.warn(`DUST generation timeout after ${timeout / 1000}s - proceeding anyway, may fail if insufficient for fees`);
-        resolve(undefined);
+        logger.error(`DUST generation timeout after ${timeout / 1000}s`);
+        reject(new Error(`DUST generation timeout after ${timeout / 1000}s - wallet may not have sufficient balance or network issues`));
         return;
       }
 
@@ -156,40 +149,38 @@ async function waitForDustAvailable(walletFacade: any, logger: any, timeout = 12
 
       if (state.dust?.availableCoins?.length > 0) {
         clearInterval(checkInterval);
-        logger.info(`DUST is available for deployment: ${state.dust.balance(new Date())}`);
+        const dustBalance = formatDust(state.dust.balance(new Date()));
+        logger.info(`DUST is available! Balance: ${dustBalance}`);
         resolve(undefined);
       }
-    }, 500);
+    }, 1000); // Check every second
   });
 }
 
 function pickDustRegistrationUtxos(state: any): Array<any> {
   const utxos = state.unshielded?.availableCoins ?? [];
+  // Filter only unregistered UTXOs (registeredForDustGeneration === false)
   return utxos.filter((entry: any) => {
     const tokenType = entry?.utxo?.tokenType ?? entry?.tokenType;
     const registered = entry?.meta?.registeredForDustGeneration;
-    return tokenType === unshieldedToken().raw && !registered;
+    // Explicitly check for false to ensure we only get unregistered UTXOs
+    return tokenType === unshieldedToken().raw && registered === false;
   });
 }
 
 async function registerDustGeneration(
   walletFacade: any,
-  seed: string,
+  unshieldedKeystore: any,
   logger: any,
 ): Promise<void> {
   logger.info('Looking for NIGHT UTXOs that can be registered for DUST generation...');
 
-  const signingKey = signingKeyFromBip340(getUnshieldedSeed(seed));
-  const verifyingKey = signatureVerifyingKey(signingKey);
   const maxAttempts = 3;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      const state: any = await withTimeout<any>(
-        walletFacade.waitForSyncedState(),
-        45_000,
-        'Timed out waiting for wallet sync before DUST registration',
-      );
+      // Get current wallet state (already synced by syncWallet before this function)
+      const state: any = walletFacade.getState?.() || await Rx.firstValueFrom(walletFacade.state());
 
       if (state.dust?.availableCoins?.length > 0) {
         logger.info(`DUST already available: ${formatDust(state.dust.balance(new Date()))}`);
@@ -211,8 +202,8 @@ async function registerDustGeneration(
         (async () => {
           const recipe = await walletFacade.registerNightUtxosForDustGeneration(
             candidates,
-            verifyingKey,
-            (payload: Uint8Array) => signData(signingKey, payload),
+            unshieldedKeystore.getPublicKey(),
+            (payload: Uint8Array) => unshieldedKeystore.signData(payload),
             state.dust?.address,
           );
           const finalized = await walletFacade.finalizeRecipe(recipe);
@@ -223,6 +214,7 @@ async function registerDustGeneration(
       );
 
       logger.info(`DUST registration transaction submitted: ${txHash}`);
+      logger.info('DUST generation will complete in the background (may take 30-60 seconds)');
       return;
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -230,22 +222,23 @@ async function registerDustGeneration(
         message.includes('Wallet.Sync') ||
         message.includes('disconnected') ||
         message.includes('timeout') ||
-        message.includes('Timed out');
+        message.includes('Timed out') ||
+        message.includes('RPC');
 
       if (!transientSyncError || attempt === maxAttempts) {
+        logger.error(`DUST registration failed after ${attempt} attempts: ${message}`);
         throw err;
       }
 
-      logger.warn(`DUST registration attempt ${attempt} failed due to transient sync issue: ${message}`);
-      logger.warn('Retrying after wallet resync...');
-      await sleep(2_500);
+      logger.warn(`DUST registration attempt ${attempt} failed due to transient issue: ${message}`);
+      logger.warn(`Retrying in 5 seconds (attempt ${attempt + 1}/${maxAttempts})...`);
+      await sleep(5_000); // Increased delay between retries
     }
   }
 }
 
 async function main() {
-  const config = getConfig();
-  setNetworkId(config.networkId);
+  const config = getConfig(); // setNetworkId is now called inside getConfig()
 
   let wallet: MidnightWalletProvider | null = null;
   let seed: string;
@@ -267,6 +260,22 @@ async function main() {
   process.on('SIGTERM', cleanup);
 
   try {
+    // Step 0: Verify proof server connectivity
+    console.log('\n╔════════════════════════════════════════╗');
+    console.log('║  PROOF SERVER VERIFICATION             ║');
+    console.log('╚════════════════════════════════════════╝\n');
+    
+    const proofServerReachable = await verifyProofServer(config.proofServer, logger);
+    if (!proofServerReachable) {
+      console.log('  ⚠️  Warning: Proof server may not be reachable');
+      console.log(`  URL: ${config.proofServer}`);
+      console.log('  This may cause DUST registration to fail\n');
+      console.log('  If using local network, ensure proof server is running:');
+      console.log('    curl http://localhost:6300/version\n');
+    } else {
+      console.log('  ✓ Proof server is reachable\n');
+    }
+
     // Step 1: Create or Restore a Wallet
     console.log('\n╔════════════════════════════════════════╗');
     console.log('║  MIDNIGHT WALLET SETUP                 ║');
@@ -336,8 +345,9 @@ async function main() {
 
   await wallet.start();
   
-  // Wait for initial sync with shorter timeout
-  const walletState: any = await waitForUnshieldedSync(logger, wallet.wallet, 300_000);
+  // Wait for full wallet sync (all three components: shielded, unshielded, dust)
+  logger.info('Waiting for full wallet sync (all components)...');
+  const walletState: any = await syncWallet(logger, wallet.wallet, 300_000);
 
   // Step 2: Get Your Wallet Address - properly encode to Bech32m
   const addressObj = walletState.unshielded?.address;
@@ -367,7 +377,7 @@ async function main() {
   
   console.log('');
   console.log('  Wallet Addresses:');
-  console.log(`    Shielded:    ${walletState.shielded?.coinPublicKey ? MidnightBech32m.encode(config.networkId, new ShieldedAddress(ShieldedCoinPublicKey.fromHexString(walletState.shielded.coinPublicKey.toHexString()), ShieldedEncryptionPublicKey.fromHexString(walletState.shielded.encryptionPublicKey.toHexString()))).toString() : 'Unable to encode address'}`);
+  console.log(`    Shielded:    ${walletState.shielded?.coinPublicKey ? MidnightBech32m.encode(config.networkId, new ShieldedAddress(ShieldedCoinPublicKey.fromHexString(walletState.shielded.coinPublicKey), ShieldedEncryptionPublicKey.fromHexString(walletState.shielded.encryptionPublicKey))).toString() : 'Unable to encode address'}`);
   console.log(`    Unshielded:  ${address}  <- send tNight here`);
   console.log(`    Dust:        ${MidnightBech32m.encode(config.networkId, walletState.dust.address).toString()}`);
   console.log('');
@@ -431,13 +441,17 @@ async function main() {
   }
 
   // Step 4: Wait for DUST Registration (Automatic)
-  console.log('  Scenario 3: already has DUST, or registering NIGHT for DUST generation now.');
+  console.log('  Registering NIGHT UTXOs for DUST generation...');
+  console.log('  Note: Full wallet sync completed, proceeding with DUST registration\n');
+  
   await withStatus('Registering NIGHT UTXOs for DUST generation', async () => {
-    await registerDustGeneration(wallet!.wallet, seed, logger);
+    await registerDustGeneration(wallet!.wallet, wallet!.unshieldedKeystore, logger);
   });
-  await withStatus('Waiting for DUST to be generated', async () => {
+  
+  await withStatus('Waiting for DUST to be generated (30-60s)', async () => {
     await waitForDustAvailable(wallet!.wallet, logger, 240_000);
   });
+  
   console.log('  ✓ DUST available!\n');
 
   const providers = buildProviders(wallet, zkConfigPath, config);

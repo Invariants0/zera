@@ -1,7 +1,5 @@
 import { setNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
 
-setNetworkId('preprod');
-
 export type NetworkConfig = {
   networkId: string;
   indexer: string;
@@ -28,19 +26,18 @@ export const PREPROD_CONFIG: NetworkConfig = {
   indexerWS: 'wss://indexer.preprod.midnight.network/api/v4/graphql/ws',
   node: 'https://rpc.preprod.midnight.network',
   nodeWS: 'wss://rpc.preprod.midnight.network',
-  proofServer: 'https://lace-proof-pub.preprod.midnight.network',
-  faucet: '',
+  proofServer: 'http://localhost:6300', // Local proof server via Docker
+  faucet: 'https://faucet.preprod.midnight.network',
 };
 
 export function getConfig(): NetworkConfig {
   const network = process.env['MIDNIGHT_NETWORK'] ?? 'local';
-  if (network === 'local') {
-    return LOCAL_CONFIG;
-  } else if (network === 'preprod') {
-    return PREPROD_CONFIG;
-  } else {
-    throw new Error(
-      `Unknown network: ${network}. Supported networks: 'local', 'preprod'.`,
-    );
-  }
+  const config = network === 'local' ? LOCAL_CONFIG : 
+                 network === 'preprod' ? PREPROD_CONFIG :
+                 (() => { throw new Error(`Unknown network: ${network}. Supported networks: 'local', 'preprod'.`); })();
+  
+  // Set network ID after determining config
+  setNetworkId(config.networkId);
+  
+  return config;
 }

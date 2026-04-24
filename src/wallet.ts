@@ -18,19 +18,23 @@ import {
   type EnvironmentConfiguration,
   FluentWalletBuilder,
 } from '@midnight-ntwrk/testkit-js';
+import { InMemoryTransactionHistoryStorage, type UnshieldedKeystore } from '@midnight-ntwrk/wallet-sdk-unshielded-wallet';
 import * as Rx from 'rxjs';
 import type { Logger } from 'pino';
 
 export class MidnightWalletProvider implements MidnightProvider, WalletProvider {
   readonly wallet: WalletFacade;
+  readonly unshieldedKeystore: UnshieldedKeystore;
 
   private constructor(
     private readonly logger: Logger,
     wallet: WalletFacade,
+    unshieldedKeystore: UnshieldedKeystore,
     private readonly zswapSecretKeys: ZswapSecretKeys,
     private readonly dustSecretKey: DustSecretKey,
   ) {
     this.wallet = wallet;
+    this.unshieldedKeystore = unshieldedKeystore;
   }
 
   getCoinPublicKey(): CoinPublicKey {
@@ -74,32 +78,48 @@ export class MidnightWalletProvider implements MidnightProvider, WalletProvider 
     env: EnvironmentConfiguration,
     seed: string,
   ): Promise<MidnightWalletProvider> {
+    // DUST wallet configuration - must match recommended values
+    // See: https://docs.midnight.network/develop/tutorial/dust-generation
     const dustOptions: DustWalletOptions = {
       ledgerParams: LedgerParameters.initialParameters(),
-      additionalFeeOverhead: 1_000n,
+      additionalFeeOverhead: 300_000_000_000_000n, // Correct value for DUST fee overhead
       feeBlocksMargin: 5,
     };
+
+    logger.info('Building wallet with DUST options...');
+    logger.debug(`DUST config: additionalFeeOverhead=${dustOptions.additionalFeeOverhead}, feeBlocksMargin=${dustOptions.feeBlocksMargin}`);
 
     const builder = FluentWalletBuilder.forEnvironment(env)
       .withDustOptions(dustOptions);
 
     const buildResult = await builder.withSeed(seed).buildWithoutStarting();
-    const { wallet, seeds } = buildResult as {
+    const { wallet, seeds, keystore } = buildResult as {
       wallet: WalletFacade;
       seeds: {
         masterSeed: string;
         shielded: Uint8Array;
         dust: Uint8Array;
       };
+      keystore: UnshieldedKeystore;
     };
 
     logger.info(`Wallet built from seed: ${seeds.masterSeed.slice(0, 8)}...`);
+    
+    // Derive secret keys from HD wallet seeds
+    const zswapSecretKeys = ZswapSecretKeys.fromSeed(seeds.shielded);
+    const dustSecretKey = DustSecretKey.fromSeed(seeds.dust);
+    
+    logger.info('Secret keys derived successfully');
+    logger.debug(`Shielded coin public key: ${zswapSecretKeys.coinPublicKey.slice(0, 16)}...`);
+    logger.debug(`DUST secret key derived from seed`);
+    logger.debug(`Unshielded keystore available for signing`);
 
     return new MidnightWalletProvider(
       logger,
       wallet,
-      ZswapSecretKeys.fromSeed(seeds.shielded),
-      DustSecretKey.fromSeed(seeds.dust),
+      keystore,
+      zswapSecretKeys,
+      dustSecretKey,
     );
   }
 }
