@@ -5,9 +5,9 @@
  * Replace these with actual API calls when backend is ready.
  */
 
-import { Asset } from '../services/assets';
-import { Collection } from '../services/collections';
-import { Activity, RegistryEntry } from '../services/marketplace';
+import type { Asset } from '../services/assets';
+import type { Collection } from '../services/collections';
+import type { Activity, RegistryEntry } from '../services/marketplace';
 
 // Mock Assets
 export const mockAssets: Asset[] = [

@@ -21,11 +21,11 @@ export default function Explore() {
   const [privateOnly, setPrivateOnly] = useState(true);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(e.currentTarget.value);
+    setSearchQuery((e.target as HTMLInputElement).value);
   };
 
   const handleVerifiedChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setVerifiedOnly(e.currentTarget.checked);
+    setVerifiedOnly((e.target as HTMLInputElement).checked);
   };
 
   const handlePrivateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
