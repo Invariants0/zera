@@ -5,10 +5,17 @@ import {
 } from '@midnight-ntwrk/midnight-js-contracts';
 import { MidnightBech32m } from '@midnight-ntwrk/wallet-sdk-address-format';
 import { unshieldedToken } from '@midnight-ntwrk/ledger-v8';
+import { signData, signingKeyFromBip340, signatureVerifyingKey } from '@midnight-ntwrk/ledger-v8';
+import {
+  ShieldedAddress,
+  ShieldedCoinPublicKey,
+  ShieldedEncryptionPublicKey,
+} from '@midnight-ntwrk/wallet-sdk-address-format';
 import pino from 'pino';
 import { createInterface } from 'readline';
 import { randomBytes } from 'crypto';
 import * as Rx from 'rxjs';
+import { getUnshieldedSeed } from '@midnight-ntwrk/testkit-js';
 
 import { getConfig } from './config.js';
 import { MidnightWalletProvider } from './wallet.js';
@@ -36,6 +43,49 @@ const logger = pino({
   level: process.env['LOG_LEVEL'] ?? 'info',
   transport: { target: 'pino-pretty' },
 });
+
+const withStatus = async <T>(message: string, fn: () => Promise<T>): Promise<T> => {
+  const clocks = ['🕐', '🕑', '🕒', '🕓', '🕔', '🕕', '🕖', '🕗', '🕘', '🕙', '🕚', '🕛'];
+  let i = 0;
+  const interval = setInterval(() => {
+    process.stdout.write(`\r  ${clocks[i++ % clocks.length]} ${message}`);
+  }, 150);
+
+  try {
+    const result = await fn();
+    clearInterval(interval);
+    process.stdout.write(`\r  OK ${message}\n`);
+    return result;
+  } catch (error) {
+    clearInterval(interval);
+    process.stdout.write(`\r  FAIL ${message}\n`);
+    throw error;
+  }
+};
+
+// Preprod faucet dispenses 1000 tNight and wallet balances are returned in base units.
+// In practice, 1_000_000_000 base units corresponds to 1000 tNight.
+const TNIGHT_SCALE = 1_000_000n;
+
+const formatDust = (raw: bigint): string => {
+  const whole = raw / 1_000_000_000_000_000n;
+  const fraction = (raw % 1_000_000_000_000_000n).toString().padStart(15, '0');
+  return `${whole.toLocaleString()}.${fraction}`;
+};
+
+const sleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+  return await Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      setTimeout(() => reject(new Error(message)), timeoutMs);
+    }),
+  ]);
+}
 
 function isProgressStrictlyComplete(progress: unknown): boolean {
   if (!progress || typeof progress !== 'object') {
@@ -83,17 +133,114 @@ async function waitForUnshieldedSync(logger: any, walletFacade: any, timeout = 3
   });
 }
 
-async function waitForDustAvailable(walletFacade: any, logger: any): Promise<void> {
+async function waitForDustAvailable(walletFacade: any, logger: any, timeout = 120_000): Promise<void> {
   logger.info('Checking wallet readiness (DUST generated on-demand)...');
-  
-  // DUST is typically generated on-demand during contract deployment
-  // Wait briefly to ensure wallet is responding, then proceed
+  logger.info(`Waiting up to ${timeout / 1000}s for DUST generation...`);
+
+  // DUST is generated on-demand and required for transaction fees.
+  // Always honor timeout even if wallet state is temporarily unavailable.
   return new Promise((resolve) => {
-    setTimeout(() => {
-      logger.info('Wallet ready for deployment.');
-      resolve(undefined);
-    }, 2000);
+    const startTime = Date.now();
+    const checkInterval = setInterval(() => {
+      if (Date.now() - startTime > timeout) {
+        clearInterval(checkInterval);
+        logger.warn(`DUST generation timeout after ${timeout / 1000}s - proceeding anyway, may fail if insufficient for fees`);
+        resolve(undefined);
+        return;
+      }
+
+      const state = walletFacade.getState?.();
+      if (!state) {
+        return;
+      }
+
+      if (state.dust?.availableCoins?.length > 0) {
+        clearInterval(checkInterval);
+        logger.info(`DUST is available for deployment: ${state.dust.balance(new Date())}`);
+        resolve(undefined);
+      }
+    }, 500);
   });
+}
+
+function pickDustRegistrationUtxos(state: any): Array<any> {
+  const utxos = state.unshielded?.availableCoins ?? [];
+  return utxos.filter((entry: any) => {
+    const tokenType = entry?.utxo?.tokenType ?? entry?.tokenType;
+    const registered = entry?.meta?.registeredForDustGeneration;
+    return tokenType === unshieldedToken().raw && !registered;
+  });
+}
+
+async function registerDustGeneration(
+  walletFacade: any,
+  seed: string,
+  logger: any,
+): Promise<void> {
+  logger.info('Looking for NIGHT UTXOs that can be registered for DUST generation...');
+
+  const signingKey = signingKeyFromBip340(getUnshieldedSeed(seed));
+  const verifyingKey = signatureVerifyingKey(signingKey);
+  const maxAttempts = 3;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const state: any = await withTimeout<any>(
+        walletFacade.waitForSyncedState(),
+        45_000,
+        'Timed out waiting for wallet sync before DUST registration',
+      );
+
+      if (state.dust?.availableCoins?.length > 0) {
+        logger.info(`DUST already available: ${formatDust(state.dust.balance(new Date()))}`);
+        return;
+      }
+
+      const candidates = pickDustRegistrationUtxos(state);
+      if (candidates.length === 0) {
+        logger.warn('No unregistered NIGHT UTXOs found for DUST registration.');
+        logger.warn('If the wallet is newly funded, wait for the faucet transfer to sync and try again.');
+        return;
+      }
+
+      logger.info(
+        `Registering ${candidates.length} NIGHT UTXO(s) for DUST generation (attempt ${attempt}/${maxAttempts})...`,
+      );
+
+      const txHash = await withTimeout(
+        (async () => {
+          const recipe = await walletFacade.registerNightUtxosForDustGeneration(
+            candidates,
+            verifyingKey,
+            (payload: Uint8Array) => signData(signingKey, payload),
+            state.dust?.address,
+          );
+          const finalized = await walletFacade.finalizeRecipe(recipe);
+          return await walletFacade.submitTransaction(finalized);
+        })(),
+        90_000,
+        'Timed out while registering NIGHT UTXOs for DUST generation',
+      );
+
+      logger.info(`DUST registration transaction submitted: ${txHash}`);
+      return;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      const transientSyncError =
+        message.includes('Wallet.Sync') ||
+        message.includes('disconnected') ||
+        message.includes('timeout') ||
+        message.includes('Timed out');
+
+      if (!transientSyncError || attempt === maxAttempts) {
+        throw err;
+      }
+
+      logger.warn(`DUST registration attempt ${attempt} failed due to transient sync issue: ${message}`);
+      logger.warn('Retrying after wallet resync...');
+      await sleep(2_500);
+    }
+  }
 }
 
 async function main() {
@@ -101,6 +248,7 @@ async function main() {
   setNetworkId(config.networkId);
 
   let wallet: MidnightWalletProvider | null = null;
+  let seed: string;
 
   // Graceful shutdown handler
   const cleanup = async () => {
@@ -123,8 +271,6 @@ async function main() {
     console.log('\n╔════════════════════════════════════════╗');
     console.log('║  MIDNIGHT WALLET SETUP                 ║');
     console.log('╚════════════════════════════════════════╝\n');
-
-  let seed: string;
 
   // For local network, use testkit pre-funded wallet seeds
   // These seeds are pre-funded by the local Midnight testnet
@@ -214,14 +360,31 @@ async function main() {
   const tokenKey = unshieldedToken().raw;
   const balance = unshieldedBalances?.[tokenKey] ?? 0n;
   const hasUnshieldedFunds = balance > 0n;
+  const displayedBalance = balance / TNIGHT_SCALE;
+  // Keep this as a warning-only heuristic, not a hard stop.
+  const minimumDeployTnight = BigInt(process.env['MIN_DEPLOY_TNIGHT'] ?? '10');
+  const minimumBalance = minimumDeployTnight * TNIGHT_SCALE;
   
-  console.log(`  Balance: ${balance} tNight\n`);
+  console.log('');
+  console.log('  Wallet Addresses:');
+  console.log(`    Shielded:    ${walletState.shielded?.coinPublicKey ? MidnightBech32m.encode(config.networkId, new ShieldedAddress(ShieldedCoinPublicKey.fromHexString(walletState.shielded.coinPublicKey.toHexString()), ShieldedEncryptionPublicKey.fromHexString(walletState.shielded.encryptionPublicKey.toHexString()))).toString() : 'Unable to encode address'}`);
+  console.log(`    Unshielded:  ${address}  <- send tNight here`);
+  console.log(`    Dust:        ${MidnightBech32m.encode(config.networkId, walletState.dust.address).toString()}`);
+  console.log('');
+  console.log(`  Faucet: ${config.faucet}`);
+  console.log('');
+  console.log(`  Balance: ${displayedBalance.toString()} tNight\n`);
+  console.log('  Scenarios:');
+  console.log('    1. No tNight yet');
+  console.log('    2. Has tNight but no DUST yet');
+  console.log('    3. Already has DUST');
 
   if (!hasUnshieldedFunds) {
     // For local networks, we'll proceed without faucet funding
     // For preprod, direct to faucet
     if (config.networkId === 'preprod') {
-      console.log('  Visit: https://faucet.preprod.midnight.network/');
+    console.log('  Scenario 1: wallet has no tNight yet.');
+    console.log('  Visit: https://faucet.preprod.midnight.network/');
       console.log(`  Address: ${address}\n`);
       console.log('  Waiting for funds (this may take a few minutes)...');
 
@@ -260,9 +423,21 @@ async function main() {
     console.log('  ✓ Wallet funded!\n');
   }
 
+  if (config.networkId === 'preprod' && balance < minimumBalance) {
+    console.warn('  ⚠️  Wallet balance may be low for deployment');
+    console.warn(`  Current balance: ${displayedBalance.toString()} tNight`);
+    console.warn(`  Recommended minimum: ${minimumDeployTnight.toString()} tNight`);
+    console.warn('  Fund this wallet further at: https://faucet.preprod.midnight.network/\n');
+  }
+
   // Step 4: Wait for DUST Registration (Automatic)
-  console.log('  Waiting for DUST to be generated...');
-  await waitForDustAvailable(wallet.wallet, logger);
+  console.log('  Scenario 3: already has DUST, or registering NIGHT for DUST generation now.');
+  await withStatus('Registering NIGHT UTXOs for DUST generation', async () => {
+    await registerDustGeneration(wallet!.wallet, seed, logger);
+  });
+  await withStatus('Waiting for DUST to be generated', async () => {
+    await waitForDustAvailable(wallet!.wallet, logger, 240_000);
+  });
   console.log('  ✓ DUST available!\n');
 
   const providers = buildProviders(wallet, zkConfigPath, config);
@@ -277,6 +452,17 @@ async function main() {
   const witnessProvider = witnesses.getWitnesses();
   const compiledContractWithWitnesses = createCompiledContractWithWitnesses(witnessProvider);
   logger.info('Compiled contract created with embedded witnesses');
+
+  // Check balance before deployment
+  const preDeploymentState = walletState;
+  const preDeploymentBalance = preDeploymentState.unshielded.balances?.[unshieldedToken().raw] ?? 0n;
+
+  if (preDeploymentBalance < minimumBalance) {
+    console.log('  ⚠️  WARNING: Wallet balance may be too low for deployment');
+    console.log(`  Balance: ${(preDeploymentBalance / TNIGHT_SCALE).toString()} tNight`);
+    console.log(`  Recommended: ≥${minimumDeployTnight.toString()} tNight`);
+    console.log('  Consider funding the wallet further at: https://faucet.preprod.midnight.network/\n');
+  }
 
   // Deploy contract
   logger.info('Deploying Zera Asset Registry contract...');
@@ -339,6 +525,19 @@ async function main() {
   process.exit(0);
   } catch (error) {
     logger.error(`Deployment failed: ${error}`);
+    
+    // Provide helpful guidance for common deployment errors
+    if (error instanceof Error) {
+      if (error.message.includes('InsufficientFunds') || error.message.includes('could not balance dust')) {
+        console.error('\n❌ Deployment Failed: Insufficient Funds for DUST');
+        console.error('   This error occurs when the wallet doesn\'t have enough balance to cover deployment fees.');
+        console.error('   Solutions:');
+        console.error('   1. Request more funds from faucet: https://faucet.preprod.midnight.network/');
+        console.error('   2. Wait longer for DUST to be generated (may take 30-60 seconds)');
+        console.error('   3. Try again in a few moments\n');
+      }
+    }
+    
     if (wallet) {
       await wallet.stop();
     }
