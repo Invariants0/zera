@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { getAssets, getAssetById, getAssetsByOwner, Asset, AssetFilters } from '../services/assets';
+import { getAssets, getAssetById, getAssetsByOwner } from '../services/assets';
+import type { Asset, AssetFilters } from '../services/assets';
 import { useAppStore } from '../store/appStore';
 
 export const useAssets = (filters?: AssetFilters) => {
