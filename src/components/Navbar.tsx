@@ -1,11 +1,22 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { Button } from "./ui/Button";
 import { Input } from "./ui/Input";
 import { Search, User, ShoppingCart, Menu } from "lucide-react";
 
 export function Navbar() {
+  const router = useRouter();
+  const [query, setQuery] = useState("");
+
+  const handleSearch = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const trimmed = query.trim();
+    router.push(trimmed ? `/explore?search=${encodeURIComponent(trimmed)}` : "/explore");
+  };
+
   return (
     <div className="w-full flex flex-col border-b border-glass-border bg-black sticky top-0 z-50">
       {/* Top Navbar */}
@@ -20,19 +31,21 @@ export function Navbar() {
         </Link>
 
         {/* Center - Search Bar */}
-        <div className="flex-1 max-w-3xl relative hidden md:block">
+        <form className="flex-1 max-w-3xl relative hidden md:block" onSubmit={handleSearch}>
           <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
             <Search className="h-5 w-5 text-text-secondary" />
           </div>
-          <input 
-            type="text" 
-            placeholder="Search items, collections, and accounts" 
+          <Input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search items, collections, and accounts"
             className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-12 pr-12 text-text-primary placeholder-text-secondary focus:outline-none focus:ring-1 focus:ring-lime focus:border-lime transition-all font-mono text-sm"
           />
-          <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none">
-             <div className="px-2 py-1 rounded-md bg-white/10 text-text-secondary text-xs font-mono border border-white/10">/</div>
-          </div>
-        </div>
+          <button type="submit" className="absolute inset-y-0 right-4 flex items-center pointer-events-auto" aria-label="Search">
+            <div className="px-2 py-1 rounded-md bg-white/10 text-text-secondary text-xs font-mono border border-white/10">/</div>
+          </button>
+        </form>
 
         {/* Right - Actions */}
         <div className="flex items-center gap-4 shrink-0">
