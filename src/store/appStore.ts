@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import { Asset } from '../services/assets';
-import { Collection } from '../services/collections';
+import { type Asset } from '../services/assets';
+import { type Collection } from '../services/collections';
 
 interface AppState {
   // Wallet state
