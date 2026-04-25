@@ -1,5 +1,6 @@
 import "@midnight-ntwrk/dapp-connector-api";
 import type { ConnectedAPI, InitialAPI } from "@midnight-ntwrk/dapp-connector-api";
+import { nativeToken } from "@midnight-ntwrk/ledger-v8";
 
 export type LaceBalance = {
   raw: string;
@@ -18,6 +19,11 @@ export type LaceSession = {
   dustBalance: {
     balance: bigint;
     cap: bigint;
+  };
+  nightBalance: {
+    shielded: bigint;
+    unshielded: bigint;
+    total: bigint;
   };
 };
 
@@ -93,6 +99,30 @@ export async function connectLaceWallet(): Promise<LaceSession> {
 
   const dustBalance = await api.getDustBalance();
 
+  // Extract NIGHT balances using nativeToken().raw (64-char key)
+  const nightTokenKey = nativeToken().raw;
+  
+  // Debug: Log full balance objects to see all tokens
+  console.log('[Wallet] NIGHT token key:', nightTokenKey);
+  console.log('[Wallet] Full shielded balances:', JSON.stringify(
+    Object.fromEntries(
+      Object.entries(shieldedBalances).map(([k, v]) => [k, v.toString()])
+    ), null, 2
+  ));
+  console.log('[Wallet] Full unshielded balances:', JSON.stringify(
+    Object.fromEntries(
+      Object.entries(unshieldedBalances).map(([k, v]) => [k, v.toString()])
+    ), null, 2
+  ));
+  
+  const shieldedNight = shieldedBalances[nightTokenKey] ?? 0n;
+  const unshieldedNight = unshieldedBalances[nightTokenKey] ?? 0n;
+  
+  console.log('[Wallet] Shielded NIGHT (raw bigint):', shieldedNight.toString());
+  console.log('[Wallet] Unshielded NIGHT (raw bigint):', unshieldedNight.toString());
+  console.log('[Wallet] Total NIGHT (raw):', (shieldedNight + unshieldedNight).toString());
+  console.log('[Wallet] Total NIGHT (formatted):', formatNightAmount(shieldedNight + unshieldedNight));
+
   return {
     api,
     address: shielded.shieldedAddress,
@@ -103,6 +133,11 @@ export async function connectLaceWallet(): Promise<LaceSession> {
     shieldedBalances,
     unshieldedBalances,
     dustBalance,
+    nightBalance: {
+      shielded: shieldedNight,
+      unshielded: unshieldedNight,
+      total: shieldedNight + unshieldedNight,
+    },
   };
 }
 
@@ -127,6 +162,30 @@ export async function restoreLaceWallet(): Promise<LaceSession | null> {
     api.getDustBalance(),
   ]);
 
+  // Extract NIGHT balances using nativeToken().raw (64-char key)
+  const nightTokenKey = nativeToken().raw;
+  
+  // Debug: Log full balance objects to see all tokens
+  console.log('[Wallet Restore] NIGHT token key:', nightTokenKey);
+  console.log('[Wallet Restore] Full shielded balances:', JSON.stringify(
+    Object.fromEntries(
+      Object.entries(shieldedBalances).map(([k, v]) => [k, v.toString()])
+    ), null, 2
+  ));
+  console.log('[Wallet Restore] Full unshielded balances:', JSON.stringify(
+    Object.fromEntries(
+      Object.entries(unshieldedBalances).map(([k, v]) => [k, v.toString()])
+    ), null, 2
+  ));
+  
+  const shieldedNight = shieldedBalances[nightTokenKey] ?? 0n;
+  const unshieldedNight = unshieldedBalances[nightTokenKey] ?? 0n;
+  
+  console.log('[Wallet Restore] Shielded NIGHT (raw bigint):', shieldedNight.toString());
+  console.log('[Wallet Restore] Unshielded NIGHT (raw bigint):', unshieldedNight.toString());
+  console.log('[Wallet Restore] Total NIGHT (raw):', (shieldedNight + unshieldedNight).toString());
+  console.log('[Wallet Restore] Total NIGHT (formatted):', formatNightAmount(shieldedNight + unshieldedNight));
+
   return {
     api,
     address: shielded.shieldedAddress,
@@ -137,6 +196,11 @@ export async function restoreLaceWallet(): Promise<LaceSession | null> {
     shieldedBalances,
     unshieldedBalances,
     dustBalance,
+    nightBalance: {
+      shielded: shieldedNight,
+      unshielded: unshieldedNight,
+      total: shieldedNight + unshieldedNight,
+    },
   };
 }
 
@@ -163,6 +227,32 @@ export function formatLaceAmount(raw: string): string {
   if (numeric >= 1_000_000) return `${(numeric / 1_000_000).toFixed(2)} tDUST`;
   if (numeric >= 1_000) return `${(numeric / 1_000).toFixed(2)} tDUST`;
   return `${numeric.toFixed(2)} tDUST`;
+}
+
+export function formatNightAmount(raw: bigint): string {
+  // IMPORTANT: On preprod, the Lace API returns NIGHT in a different scale
+  // Based on testing: 1,000,000 base units = 1 tNIGHT (not 1,000,000,000)
+  // Example: API returns 1000000000 for 1,000 tNIGHT shown in Lace UI
+  const NIGHT_SCALE = 1_000_000n;  // Correct scale for preprod
+  
+  // Handle zero case
+  if (raw === 0n) {
+    return '0 tNIGHT';
+  }
+  
+  const whole = raw / NIGHT_SCALE;
+  const fraction = raw % NIGHT_SCALE;
+  
+  // If no fractional part, return whole number
+  if (fraction === 0n) {
+    return `${whole.toLocaleString()} tNIGHT`;
+  }
+  
+  // Format fractional part with up to 6 decimal places, trim trailing zeros
+  const fractionStr = fraction.toString().padStart(6, '0');
+  const trimmedFraction = fractionStr.replace(/0+$/, '');
+  
+  return `${whole.toLocaleString()}.${trimmedFraction} tNIGHT`;
 }
 
 export async function startLaceBalancePolling(
