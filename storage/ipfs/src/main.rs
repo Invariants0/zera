@@ -4,6 +4,7 @@ use axum::{
 };
 use std::net::SocketAddr;
 use tokio::net::TcpListener;
+use tower_http::cors::{Any, CorsLayer};
 
 mod handlers;
 mod ipfs;
@@ -17,14 +18,23 @@ async fn main() {
         .route("/health", get(handlers::health))
         .route("/upload", post(handlers::upload))
         .route("/fetch/:cid", get(handlers::fetch))
-        .route("/verify/:cid", get(handlers::verify));
+        .route("/verify/:cid", get(handlers::verify))
+        .layer(
+            CorsLayer::new()
+                .allow_origin(Any)
+                .allow_methods(Any)
+                .allow_headers(Any),
+        );
 
     let port = std::env::var("PORT")
-        .unwrap_or_else(|_| "10000".to_string())
+        .unwrap_or_else(|_| "8080".to_string())
         .parse::<u16>()
-        .unwrap_or(10000);
+        .unwrap_or(8080);
 
-    let addr = SocketAddr::from(([0, 0, 0, 0], port));
+    let host = std::env::var("HOST").unwrap_or_else(|_| "0.0.0.0".to_string());
+    let addr: SocketAddr = format!("{host}:{port}")
+        .parse()
+        .expect("failed to parse IPFS server address");
 
     println!("🚀 ZERA IPFS API Server");
     println!("📡 Listening on: http://{}", addr);
