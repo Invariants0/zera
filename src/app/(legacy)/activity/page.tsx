@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Card } from "../../components/ui/Card";
-import { Badge } from "../../components/ui/Badge";
+import { Card } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
 import { Activity as ActivityIcon, ArrowRight } from "lucide-react";
-import { getActivity } from "../../services/marketplace";
-import type { Activity } from "../../services/marketplace";
-import { Loading } from "../../components/ui/Loading";
-import { EmptyState } from "../../components/ui/EmptyState";
+import { getActivity } from "@/services/marketplace";
+import type { Activity } from "@/services/marketplace";
+import { Loading } from "@/components/ui/Loading";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 const activityTypeColors = {
   mint: "text-lime",

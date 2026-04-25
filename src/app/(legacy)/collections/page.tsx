@@ -1,8 +1,8 @@
-import { Card } from "../../components/ui/Card";
-import { Button } from "../../components/ui/Button";
-import { Input } from "../../components/ui/Input";
+import { Card } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 import { Search, Filter, CheckCircle2 } from "lucide-react";
-import { topCollections } from "../../data/mockData";
+import { topCollections } from '@/data/mockData';
 import Link from "next/link";
 
 export default function Collections() {

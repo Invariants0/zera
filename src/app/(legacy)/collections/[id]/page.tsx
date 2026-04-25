@@ -1,9 +1,9 @@
-import { Card } from "../../../components/ui/Card";
-import { Badge } from "../../../components/ui/Badge";
-import { Button } from "../../../components/ui/Button";
-import { Input } from "../../../components/ui/Input";
+import { Card } from '@/components/ui/Card';
+import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 import { Search, Filter, LayoutGrid, List, CheckCircle2, Globe, MessageCircle, Share2, Heart } from "lucide-react";
-import { featuredAssets } from "../../../data/mockData";
+import { featuredAssets } from '@/data/mockData';
 import Link from "next/link";
 
 export default function CollectionDetail() {
