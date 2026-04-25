@@ -1,5 +1,4 @@
 import apiClient from './api';
-import { mockActivity, mockRegistry, simulateDelay } from '../lib/mockBackend';
 
 export interface MarketplaceStats {
   totalVolume: string;
@@ -41,28 +40,16 @@ export const getMarketplaceStats = async (): Promise<MarketplaceStats> => {
 
 // Get recent activity
 export const getActivity = async (limit: number = 50): Promise<Activity[]> => {
-  try {
-    const response = await apiClient.get('/marketplace/activity', {
-      params: { limit },
-    });
-    return response.data;
-  } catch (error) {
-    console.warn('API unavailable, using mock data');
-    await simulateDelay();
-    return mockActivity;
-  }
+  const response = await apiClient.get('/marketplace/activity', {
+    params: { limit },
+  });
+  return response.data;
 };
 
 // Get registry entries
 export const getRegistryEntries = async (): Promise<RegistryEntry[]> => {
-  try {
-    const response = await apiClient.get('/registry');
-    return response.data;
-  } catch (error) {
-    console.warn('API unavailable, using mock data');
-    await simulateDelay();
-    return mockRegistry;
-  }
+  const response = await apiClient.get('/registry');
+  return response.data;
 };
 
 // Get trending collections

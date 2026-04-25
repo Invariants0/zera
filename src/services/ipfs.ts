@@ -8,6 +8,15 @@ export interface UploadResponse {
   size: number;
 }
 
+export interface EncryptedPayload {
+  file: File;
+  key: string;
+  iv: string;
+  algorithm: "AES-GCM";
+  originalName: string;
+  originalType: string;
+}
+
 export interface UploadProgress {
   loaded: number;
   total: number;
@@ -59,6 +68,45 @@ export const uploadMetadataToIPFS = async (metadata: object): Promise<UploadResp
   }
 };
 
+const encodeBase64 = (bytes: Uint8Array) => {
+  let binary = "";
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+  return btoa(binary);
+};
+
+const decodeBase64 = (value: string) => {
+  const binary = atob(value);
+  return Uint8Array.from(binary, (char) => char.charCodeAt(0));
+};
+
+export const encryptFileForIPFS = async (file: File): Promise<EncryptedPayload> => {
+  const rawBytes = await file.arrayBuffer();
+  const key = await crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, true, ["encrypt", "decrypt"]);
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const encrypted = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, rawBytes);
+  const exportedKey = await crypto.subtle.exportKey("raw", key);
+  const encryptedFile = new File([encrypted], `${file.name}.enc`, { type: "application/octet-stream" });
+
+  return {
+    file: encryptedFile,
+    key: encodeBase64(new Uint8Array(exportedKey)),
+    iv: encodeBase64(iv),
+    algorithm: "AES-GCM",
+    originalName: file.name,
+    originalType: file.type,
+  };
+};
+
+export const decryptIPFSBlob = async (blob: Blob, keyB64: string, ivB64: string) => {
+  const keyBytes = decodeBase64(keyB64);
+  const iv = decodeBase64(ivB64);
+  const cryptoKey = await crypto.subtle.importKey("raw", keyBytes, { name: "AES-GCM" }, false, ["decrypt"]);
+  const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, cryptoKey, await blob.arrayBuffer());
+  return new Blob([decrypted]);
+};
+
 // Get file from IPFS
 export const getFromIPFS = async (cid: string): Promise<Blob> => {
   try {
@@ -82,6 +130,7 @@ export const validateFile = (file: File): { valid: boolean; error?: string } => 
     'image/webp',
     'video/mp4',
     'video/webm',
+    'application/octet-stream',
   ];
 
   if (file.size > MAX_SIZE) {

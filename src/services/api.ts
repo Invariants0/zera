@@ -1,12 +1,24 @@
 import axios from 'axios';
 import type { AxiosError, AxiosInstance } from 'axios';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 // Create axios instance with default config
 const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 30000,
+  // 60 s for normal calls; contract calls that spin up a wallet on first request
+  // can take much longer — use contractApiClient below for those.
+  timeout: 60_000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// For contract API calls that may need to initialise a Midnight wallet on first
+// request (cold-start wallet sync can take 30-90 s).
+export const contractApiClient: AxiosInstance = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: 120_000,
   headers: {
     'Content-Type': 'application/json',
   },
