@@ -46,7 +46,7 @@ export default function Home() {
                   Explore Marketplace <ArrowRight className="w-4 h-4" />
                 </Button>
               </Link>
-              <Link href="/mint">
+              <Link href="/create-asset">
                 <Button variant="secondary" size="lg" className="w-full sm:w-auto rounded-xl bg-white/5 border-white/10 h-14 px-8 text-sm">
                   Start Tokenizing
                 </Button>
@@ -274,9 +274,9 @@ export default function Home() {
             </h2>
             <p className="font-mono text-text-secondary text-sm max-w-xl">Mint, tokenize, launch, and trade assets built on trust.</p>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 pt-4 w-full sm:w-auto">
-              <Link href="/mint">
+              <Link href="/create-asset">
                 <Button variant="primary" className="px-8 text-sm w-full sm:w-auto">
-                  Start Tokenization
+                  Start Tokenizing
                 </Button>
               </Link>
               <Link href="/explore">
