@@ -27,9 +27,8 @@ const navSections = [
     ],
   },
   {
-    title: "Tokenization",
+    title: "Creation",
     items: [
-      { name: "Mint Asset", href: "/mint", icon: PlusCircle },
       { name: "Create Asset", href: "/create-asset", icon: FolderPlus },
     ],
   },
