@@ -38,6 +38,14 @@ const nextConfig = {
     'level',
     'classic-level',
   ],
+  webpack: (config, { isServer }) => {
+    config.experiments = {
+      ...config.experiments,
+      asyncWebAssembly: true,
+      layers: true,
+    };
+    return config;
+  },
 };
 
 export default nextConfig;
