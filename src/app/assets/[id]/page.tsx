@@ -5,12 +5,13 @@ import { use } from "react";
 import { Card } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
 import { Button } from "../../../components/ui/Button";
-import { Heart, CheckCircle2, ArrowRightLeft, ExternalLink, Shield, Lock } from "lucide-react";
+import { Heart, CheckCircle2, ArrowRightLeft, ExternalLink, Shield, Lock, Download, ShoppingCart } from "lucide-react";
 import { useWallet } from "../../../hooks/useWallet";
 import { Loading } from "../../../components/ui/Loading";
 import { EmptyState } from "../../../components/ui/EmptyState";
 import toast from "react-hot-toast";
 import Link from "next/link";
+import { getFromIPFS, decryptIPFSBlob } from "../../../services/ipfs";
 
 type Asset = {
   id: string; title: string; description?: string; creator: string; owner: string;
@@ -18,20 +19,69 @@ type Asset = {
   verified: boolean; private: boolean; createdAt: string; updatedAt: string;
 };
 
+type AssetMetadata = {
+  name: string;
+  description: string;
+  image: string | null;
+  file: string | null;
+  encryption: {
+    image: null;
+    file: {
+      algorithm: string;
+      key: string;
+      iv: string;
+      originalName: string;
+      originalType: string;
+    } | null;
+  };
+  creator: string;
+};
+
 export default function AssetDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { walletAddress, isConnected } = useWallet();
+  const { walletAddress, isConnected, walletApi } = useWallet();
   const [asset, setAsset] = useState<Asset | null>(null);
   const [loading, setLoading] = useState(true);
   const [watchlisted, setWatchlisted] = useState(false);
+  const [metadata, setMetadata] = useState<AssetMetadata | null>(null);
+  const [isPurchasing, setIsPurchasing] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [hasPurchased, setHasPurchased] = useState(false);
 
   useEffect(() => {
-    fetch(`/api/assets/${id}`)
-      .then((r) => r.json())
-      .then(setAsset)
-      .catch(() => setAsset(null))
-      .finally(() => setLoading(false));
-  }, [id]);
+    const loadAsset = async () => {
+      try {
+        const response = await fetch(`/api/assets/${id}`);
+        const assetData = await response.json();
+        setAsset(assetData);
+
+        // Fetch metadata from IPFS
+        if (assetData.metadataUri) {
+          const cid = assetData.metadataUri.replace('ipfs://', '');
+          const metadataBlob = await getFromIPFS(cid);
+          const metadataText = await metadataBlob.text();
+          const metadataJson = JSON.parse(metadataText);
+          setMetadata(metadataJson);
+        }
+
+        // Check if user has purchased this asset
+        if (walletAddress) {
+          const purchaseResponse = await fetch(`/api/purchases?userId=${walletAddress}&assetId=${id}`);
+          if (purchaseResponse.ok) {
+            const purchaseData = await purchaseResponse.json();
+            setHasPurchased(purchaseData.hasPurchased || false);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load asset:', error);
+        setAsset(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadAsset();
+  }, [id, walletAddress]);
 
   const toggleWatchlist = async () => {
     if (!walletAddress) { toast.error('Connect wallet first'); return; }
@@ -66,6 +116,110 @@ export default function AssetDetail({ params }: { params: Promise<{ id: string }
         toast.error('Ownership could not be verified', { id: tid });
       }
     } catch { toast.error('Verification failed', { id: tid }); }
+  };
+
+  const handlePurchase = async () => {
+    if (!isConnected || !walletAddress) {
+      toast.error('Connect your wallet first');
+      return;
+    }
+
+    if (!walletApi) {
+      toast.error('Wallet is not ready yet');
+      return;
+    }
+
+    if (!asset) return;
+
+    setIsPurchasing(true);
+    const tid = toast.loading('Processing purchase with tNight...');
+
+    try {
+      // Transfer ownership via Midnight contract
+      const transferResponse = await fetch(`/api/assets/${id}/transfer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from: asset.owner,
+          to: walletAddress,
+          price: asset.price,
+        }),
+      });
+
+      const transferData = await transferResponse.json();
+
+      if (!transferData.success) {
+        throw new Error(transferData.message || 'Transfer failed');
+      }
+
+      // Record purchase in database
+      await fetch('/api/purchases', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: walletAddress,
+          assetId: id,
+          price: asset.price,
+          txHash: transferData.transactionHash,
+        }),
+      });
+
+      setHasPurchased(true);
+      toast.success('Purchase successful! You can now download the encrypted file.', { id: tid });
+
+      // Refresh asset data
+      const response = await fetch(`/api/assets/${id}`);
+      const updatedAsset = await response.json();
+      setAsset(updatedAsset);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Purchase failed';
+      toast.error(message, { id: tid });
+    } finally {
+      setIsPurchasing(false);
+    }
+  };
+
+  const handleDownload = async () => {
+    if (!metadata?.file || !metadata.encryption.file) {
+      toast.error('No downloadable file available');
+      return;
+    }
+
+    if (!hasPurchased && !isOwner) {
+      toast.error('You must purchase this asset first');
+      return;
+    }
+
+    setIsDownloading(true);
+    const tid = toast.loading('Downloading and decrypting file...');
+
+    try {
+      const fileCid = metadata.file.replace('ipfs://', '');
+      const encryptedBlob = await getFromIPFS(fileCid);
+
+      const decryptedBlob = await decryptIPFSBlob(
+        encryptedBlob,
+        metadata.encryption.file.key,
+        metadata.encryption.file.iv
+      );
+
+      // Create download link
+      const url = URL.createObjectURL(decryptedBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = metadata.encryption.file.originalName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast.success('File downloaded successfully!', { id: tid });
+    } catch (error) {
+      console.error('Download failed:', error);
+      toast.error('Failed to download file', { id: tid });
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   if (loading) return <div className="p-10"><Loading text="Loading asset..." /></div>;
@@ -130,7 +284,31 @@ export default function AssetDetail({ params }: { params: Promise<{ id: string }
           </Card>
 
           <div className="flex flex-col gap-3">
-            <Button variant="primary" className="h-12 gap-2" onClick={verifyOwnership}>
+            {!isOwner && !hasPurchased && (
+              <Button 
+                variant="primary" 
+                className="h-12 gap-2" 
+                onClick={handlePurchase}
+                disabled={isPurchasing}
+              >
+                <ShoppingCart className="w-4 h-4" /> 
+                {isPurchasing ? 'Processing...' : `Purchase for ${asset.price} tNight`}
+              </Button>
+            )}
+
+            {(isOwner || hasPurchased) && metadata?.file && (
+              <Button 
+                variant="primary" 
+                className="h-12 gap-2" 
+                onClick={handleDownload}
+                disabled={isDownloading}
+              >
+                <Download className="w-4 h-4" /> 
+                {isDownloading ? 'Downloading...' : 'Download Asset File'}
+              </Button>
+            )}
+
+            <Button variant="secondary" className="h-12 gap-2 border-white/10" onClick={verifyOwnership}>
               <Shield className="w-4 h-4" /> Verify Ownership (ZK Proof)
             </Button>
 
