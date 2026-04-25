@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-
-import { createListing, listListings } from '../../../../server/marketplace/marketplaceService';
+import { createListing, listListings } from '@/server/marketplace/marketplaceService';
 
 export const runtime = 'nodejs';
 
@@ -12,14 +11,15 @@ const createListingSchema = z.object({
 });
 
 export async function GET() {
-  return NextResponse.json(listListings(), { status: 200 });
+  const listings = await listListings();
+  return NextResponse.json(listings, { status: 200 });
 }
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const input = createListingSchema.parse(body);
-    const result = createListing(input);
+    const result = await createListing(input);
     return NextResponse.json(result, { status: result.success ? 200 : 400 });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to create listing';
