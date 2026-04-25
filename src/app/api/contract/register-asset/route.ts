@@ -19,11 +19,15 @@ export async function POST(request: Request) {
     const result = await registerAsset(input);
     return NextResponse.json(result, { status: 200 });
   } catch (error) {
+    // Log the full error server-side so it's visible in the Next.js terminal
+    console.error('[register-asset] Error:', error);
     const message = error instanceof Error ? error.message : 'Failed to register asset';
+    const stack = error instanceof Error ? error.stack : undefined;
     return NextResponse.json(
       {
         success: false,
         message,
+        ...(process.env.NODE_ENV !== 'production' && { stack }),
       },
       { status: 400 },
     );
