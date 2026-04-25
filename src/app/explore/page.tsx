@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import type React from "react";
 import { useSearchParams } from "next/navigation";
 import { Card } from "../../components/ui/Card";
@@ -16,6 +16,14 @@ import Link from "next/link";
 const categories = ["All", "Art", "Music", "Gaming", "Memberships", "IP Licenses"];
 
 export default function Explore() {
+  return (
+    <Suspense fallback={<Loading />}>
+      <ExploreContent />
+    </Suspense>
+  );
+}
+
+function ExploreContent() {
   const searchParams = useSearchParams();
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState(searchParams.get("search") ?? "");

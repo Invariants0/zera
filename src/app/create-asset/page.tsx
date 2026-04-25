@@ -21,6 +21,7 @@ export default function CreateAssetPage() {
   const [attachmentCid, setAttachmentCid] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [localProgress, setLocalProgress] = useState("Idle");
+  const [successData, setSuccessData] = useState<{ txHash: string; assetId: string, name: string } | null>(null);
 
   const imageLabel = useMemo(() => imageFile?.name ?? "Choose image", [imageFile]);
   const attachmentLabel = useMemo(() => attachmentFile?.name ?? "Choose file", [attachmentFile]);
@@ -135,19 +136,15 @@ export default function CreateAssetPage() {
         throw new Error(minted.message);
       }
 
-      toast.success("Asset created successfully");
-      setAssetName("");
-      setDescription("");
-      setImageFile(null);
-      setAttachmentFile(null);
-      setImagePreview(null);
-      setImageCid(null);
-      setAttachmentCid(null);
-      setLocalProgress("Done");
+      setSuccessData({
+        txHash: minted.transactionHash || "Unknown",
+        assetId: minted.data?.assetId || "Unknown",
+        name: assetName.trim()
+      });
 
-      if (walletApi) {
-        await walletApi.hintUsage(["makeTransfer", "submitTransaction"]);
-      }
+      toast.success(`Asset "${assetName.trim()}" created successfully!`);
+      // We purposefully DO NOT reset the form here so the user can see the success card!
+      setLocalProgress("Done");
     } catch (submitError) {
       const message = submitError instanceof Error ? submitError.message : "Failed to create asset";
       toast.error(message);
@@ -252,14 +249,67 @@ export default function CreateAssetPage() {
             </div>
           ) : null}
 
-          <div className="flex justify-end">
-          <Button variant="primary" className="h-12 px-8 gap-2" onClick={handleSubmit} disabled={isSubmitting}>
-            <UploadCloud className="w-4 h-4" />
-            {isSubmitting ? "Creating..." : "Create Asset"}
-          </Button>
+          <div className="flex justify-end gap-4">
+            {successData && (
+              <Button variant="secondary" className="h-12 px-8" onClick={() => {
+                setSuccessData(null);
+                setAssetName("");
+                setDescription("");
+                setImageFile(null);
+                setAttachmentFile(null);
+                setImagePreview(null);
+                setImageCid(null);
+                setAttachmentCid(null);
+              }}>
+                Mint Another
+              </Button>
+            )}
+            <Button variant="primary" className="h-12 px-8 gap-2" onClick={handleSubmit} disabled={isSubmitting || !!successData}>
+              <UploadCloud className="w-4 h-4" />
+              {isSubmitting ? "Creating..." : successData ? "Asset Created" : "Create Asset"}
+            </Button>
           </div>
         </div>
       </Card>
+
+      {successData && (
+        <Card className="mt-8 bg-lime/5 border-lime/20 p-6 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0 w-12 h-12 rounded-full bg-lime/20 flex items-center justify-center">
+               <CheckCircle2 className="w-6 h-6 text-lime" />
+            </div>
+            <div className="flex-1 min-w-0">
+               <h3 className="text-xl font-grotesk font-bold text-lime uppercase tracking-tight">Asset Created: {successData.name}</h3>
+               <p className="mt-1 text-sm font-mono text-text-secondary">
+                 Your asset was registered to the Midnight network. Because Midnight uses ZK-SNARKs, the network mathematically verified your ownership without ever exposing your private keys!
+               </p>
+               
+               <div className="mt-6 space-y-4">
+                 <div className="rounded-xl border border-lime/10 bg-black/40 p-4">
+                   <p className="text-[10px] font-mono uppercase text-lime/70">Transaction Hash</p>
+                   <p className="mt-1 text-sm font-mono text-text-primary break-all">{successData.txHash}</p>
+                 </div>
+                 <div className="rounded-xl border border-lime/10 bg-black/40 p-4">
+                   <p className="text-[10px] font-mono uppercase text-lime/70">Zera Asset ID</p>
+                   <p className="mt-1 text-sm font-mono text-text-primary break-all">{successData.assetId}</p>
+                 </div>
+               </div>
+
+               <div className="mt-6 flex flex-wrap gap-4">
+                 <a 
+                   href={`https://testnet.explorer.midnight.network/transactions/${successData.txHash}`} 
+                   target="_blank" 
+                   rel="noopener noreferrer"
+                 >
+                   <Button variant="secondary" className="border-lime/30 text-lime hover:bg-lime/10 h-10">
+                     View on Explorer
+                   </Button>
+                 </a>
+               </div>
+            </div>
+          </div>
+        </Card>
+      )}
     </div>
   );
 }
