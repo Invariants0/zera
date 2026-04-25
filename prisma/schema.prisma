@@ -109,3 +109,16 @@ model Watchlist {
 
   @@unique([userId, assetId])
 }
+
+model Purchase {
+  id        String   @id @default(cuid())
+  userId    String
+  assetId   String
+  price     String
+  txHash    String?
+  createdAt DateTime @default(now())
+
+  @@unique([userId, assetId])
+  @@index([userId])
+  @@index([assetId])
+}
