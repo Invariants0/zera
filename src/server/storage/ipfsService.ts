@@ -1,4 +1,6 @@
-const DEFAULT_IPFS_SERVICE_URL = process.env.IPFS_SERVICE_URL || 'http://localhost:8080';
+// IPFS_SERVICE_URL should point to the Rust IPFS microservice (storage/ipfs).
+// NEXT_PUBLIC_IPFS_API_URL — set them to the same host:port in your .env.
+const DEFAULT_IPFS_SERVICE_URL = process.env.IPFS_SERVICE_URL ?? 'http://localhost:8080';
 
 type UploadResult = {
   cid: string;
