@@ -30,8 +30,7 @@ const navSections = [
     title: "Tokenization",
     items: [
       { name: "Mint Asset", href: "/mint", icon: PlusCircle },
-      { name: "Create Collection", href: "/create-collection", icon: FolderPlus },
-      { name: "Creator Studio", href: "/creator-studio", icon: MonitorPlay },
+      { name: "Create Asset", href: "/create-asset", icon: FolderPlus },
     ],
   },
   {
