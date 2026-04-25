@@ -73,18 +73,18 @@ export default function CreateAssetPage() {
 
     setIsSubmitting(true);
     try {
-      const encryptedImageFile = imageFile ? await encryptFileForIPFS(imageFile) : null;
-      const encryptedAttachmentFile = attachmentFile ? await encryptFileForIPFS(attachmentFile) : null;
-
-      let encryptedImageUploadCid: string | null = null;
-      let encryptedAttachmentUploadCid: string | null = null;
-
-      if (encryptedImageFile) {
-        setLocalProgress("Uploading encrypted image...");
-        const imageUpload = await uploadToIPFS(encryptedImageFile.file);
-        encryptedImageUploadCid = imageUpload.cid;
+      // Upload image WITHOUT encryption (public display)
+      let imageUploadCid: string | null = null;
+      if (imageFile) {
+        setLocalProgress("Uploading image...");
+        const imageUpload = await uploadToIPFS(imageFile);
+        imageUploadCid = imageUpload.cid;
         setImageCid(imageUpload.cid);
       }
+
+      // Encrypt and upload file (private content)
+      const encryptedAttachmentFile = attachmentFile ? await encryptFileForIPFS(attachmentFile) : null;
+      let encryptedAttachmentUploadCid: string | null = null;
 
       if (encryptedAttachmentFile) {
         setLocalProgress("Uploading encrypted file...");
@@ -96,18 +96,12 @@ export default function CreateAssetPage() {
       const metadata = {
         name: assetName.trim(),
         description: description.trim(),
-        image: encryptedImageUploadCid ? `ipfs://${encryptedImageUploadCid}` : null,
+        image: imageUploadCid ? `ipfs://${imageUploadCid}` : null,
         file: encryptedAttachmentUploadCid ? `ipfs://${encryptedAttachmentUploadCid}` : null,
         encryption: {
-          image: encryptedImageFile
-            ? {
-                algorithm: encryptedImageFile.algorithm,
-                key: encryptedImageFile.key,
-                iv: encryptedImageFile.iv,
-                originalName: encryptedImageFile.originalName,
-                originalType: encryptedImageFile.originalType,
-              }
-            : null,
+          // Image is NOT encrypted
+          image: null,
+          // Only file is encrypted
           file: encryptedAttachmentFile
             ? {
                 algorithm: encryptedAttachmentFile.algorithm,
@@ -160,7 +154,7 @@ export default function CreateAssetPage() {
           Create Asset
         </h1>
         <p className="font-mono text-sm text-text-secondary mt-2">
-          Upload an encrypted image and optional file. Everything is stored in IPFS.
+          Upload a public image and optional encrypted file. Files are stored on IPFS and can be downloaded after purchase.
         </p>
       </div>
 
@@ -191,7 +185,7 @@ export default function CreateAssetPage() {
               <label htmlFor="asset-image" className="flex min-h-48 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-white/20 bg-black hover:border-lime/50 hover:bg-white/5 transition-colors">
                 <ImageIcon className="w-8 h-8 text-text-secondary mb-3" />
                 <span className="font-mono text-sm text-text-primary">{imageLabel}</span>
-                <span className="font-mono text-[10px] text-text-muted mt-2">Encrypted before IPFS upload</span>
+                <span className="font-mono text-[10px] text-text-muted mt-2">Public preview (not encrypted)</span>
               </label>
               {imagePreview ? (
                 <div className="mt-3 rounded-xl overflow-hidden border border-white/10">
@@ -216,7 +210,7 @@ export default function CreateAssetPage() {
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
             <p className="font-mono text-[10px] uppercase tracking-widest text-text-secondary">Storage and transaction</p>
             <p className="font-mono text-sm text-text-primary mt-2">
-              Files are encrypted locally, uploaded to IPFS, then registered with the connected Midnight wallet.
+              Images are uploaded publicly to IPFS for display. Files are encrypted locally before upload and can only be decrypted after purchase with tNight tokens.
             </p>
           </div>
         </div>
