@@ -3,11 +3,12 @@
 import { useEffect, useState, Suspense } from "react";
 import type React from "react";
 import { useSearchParams } from "next/navigation";
+import toast from "react-hot-toast";
 import { Card } from "../../components/ui/Card";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
-import { Search, Filter, ChevronDown, CheckCircle2, Heart, Package } from "lucide-react";
+import { Search, Filter, ChevronDown, CheckCircle2, Heart, Package, RefreshCw } from "lucide-react";
 import { useAssets } from "../../hooks/useAssets";
 import { Loading, CardSkeleton } from "../../components/ui/Loading";
 import { EmptyState } from "../../components/ui/EmptyState";
@@ -27,8 +28,8 @@ function ExploreContent() {
   const searchParams = useSearchParams();
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState(searchParams.get("search") ?? "");
-  const [verifiedOnly, setVerifiedOnly] = useState(true);
-  const [privateOnly, setPrivateOnly] = useState(true);
+  const [verifiedOnly, setVerifiedOnly] = useState(false);
+  const [privateOnly, setPrivateOnly] = useState(false);
 
   useEffect(() => {
     setSearchQuery(searchParams.get("search") ?? "");
@@ -48,8 +49,8 @@ function ExploreContent() {
 
   const { assets, loading, error } = useAssets({
     category: selectedCategory !== "All" ? selectedCategory.toLowerCase() : undefined,
-    verified: verifiedOnly,
-    private: privateOnly,
+    verified: verifiedOnly ? true : undefined,
+    private: privateOnly ? true : undefined,
     search: searchQuery || undefined,
   });
 
@@ -66,7 +67,36 @@ function ExploreContent() {
       
       {/* Header Area */}
       <div className="px-6 md:px-10 py-8 border-b border-white/5">
-        <h1 className="text-3xl font-grotesk font-bold uppercase tracking-tight mb-6">Explore Assets</h1>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-6">
+          <h1 className="text-3xl font-grotesk font-bold uppercase tracking-tight">Explore Assets</h1>
+          
+          <Button 
+            variant="secondary" 
+            className="shrink-0 gap-2 border-white/10 hover:bg-white/5 hover:border-lime/50 transition-all font-mono text-[10px]"
+            onClick={async (e) => {
+              const btn = e.currentTarget;
+              btn.disabled = true;
+              const tid = toast.loading("Syncing with Midnight Registry...");
+              try {
+                const res = await fetch('/api/contract/sync', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                  toast.success(data.message, { id: tid });
+                  setTimeout(() => window.location.reload(), 1500);
+                } else {
+                  toast.error(data.message, { id: tid });
+                }
+              } catch (err) {
+                toast.error("Sync failed", { id: tid });
+              } finally {
+                btn.disabled = false;
+              }
+            }}
+          >
+            <RefreshCw className="w-3 h-3 text-lime" />
+            Sync Registry
+          </Button>
+        </div>
         
         <div className="flex flex-col sm:flex-row gap-4 justify-between">
            <div className="flex-1 w-full flex items-center gap-4 overflow-x-auto no-scrollbar">
