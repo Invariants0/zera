@@ -1,5 +1,8 @@
 import apiClient from './api';
 
+// Must match IPFS_SERVICE_URL on the server side (src/server/storage/ipfsService.ts).
+// Rust IPFS server (storage/ipfs/) defaults to port 8080.
+// Set NEXT_PUBLIC_IPFS_API_URL=http://localhost:8080 in .env.local to match.
 const IPFS_API_URL = process.env.NEXT_PUBLIC_IPFS_API_URL || 'http://localhost:8080';
 
 export interface UploadResponse {
@@ -110,7 +113,8 @@ export const decryptIPFSBlob = async (blob: Blob, keyB64: string, ivB64: string)
 // Get file from IPFS
 export const getFromIPFS = async (cid: string): Promise<Blob> => {
   try {
-    const response = await apiClient.get(`${IPFS_API_URL}/ipfs/${cid}`, {
+    // Rust server exposes /fetch/:cid — not /ipfs/:cid
+    const response = await apiClient.get(`${IPFS_API_URL}/fetch/${cid}`, {
       responseType: 'blob',
     });
     return response.data;

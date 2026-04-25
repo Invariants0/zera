@@ -19,7 +19,7 @@ export function buildProviders(
 
     return {
         privateStateProvider: levelPrivateStateProvider({
-            privateStateStoreName: `zera-asset-registry-${Date.now()}`,
+            privateStateStoreName: `zera-asset-registry-db`,
             privateStoragePasswordProvider: () => 'Zera-Asset-Registry-Test-Password',
             accountId: wallet.getCoinPublicKey(),
         }),
