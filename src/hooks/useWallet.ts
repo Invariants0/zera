@@ -6,6 +6,7 @@ import {
   connectLaceWallet,
   getLaceBalance,
   formatLaceAmount,
+  formatNightAmount,
   restoreLaceWallet,
   startLaceBalancePolling,
   type LaceSession,
@@ -26,10 +27,20 @@ export const useWallet = () => {
     shielded: Record<string, string>;
     unshielded: Record<string, string>;
     dust: string;
+    night: {
+      shielded: string;
+      unshielded: string;
+      total: string;
+    };
   }>({
     shielded: {},
     unshielded: {},
     dust: "0 tDUST",
+    night: {
+      shielded: "0 tNIGHT",
+      unshielded: "0 tNIGHT",
+      total: "0 tNIGHT",
+    },
   });
   const setWalletAddress = useAppStore((state) => state.setWalletAddress);
   const setWalletBalance = useAppStore((state) => state.setWalletBalance);
@@ -77,6 +88,11 @@ export const useWallet = () => {
           Object.entries(session.unshieldedBalances).map(([token, amount]) => [token, formatLaceAmount(amount.toString())]),
         ),
         dust: formatLaceAmount(session.dustBalance.balance.toString()),
+        night: {
+          shielded: formatNightAmount(session.nightBalance.shielded),
+          unshielded: formatNightAmount(session.nightBalance.unshielded),
+          total: formatNightAmount(session.nightBalance.total),
+        },
       });
       setIsConnected(true);
 
@@ -119,7 +135,16 @@ export const useWallet = () => {
     setShieldedAddress(null);
     setUnshieldedAddress(null);
     setDustAddress(null);
-    setBalanceBreakdown({ shielded: {}, unshielded: {}, dust: "0 tDUST" });
+    setBalanceBreakdown({ 
+      shielded: {}, 
+      unshielded: {}, 
+      dust: "0 tDUST",
+      night: {
+        shielded: "0 tNIGHT",
+        unshielded: "0 tNIGHT",
+        total: "0 tNIGHT",
+      },
+    });
     setWalletBalance("0 tDUST");
     setIsConnected(false);
 
