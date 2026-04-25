@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
-import { createAsset, listAssets } from '../../../server/assets/assetService';
+import { createAsset, listAssets } from '@/server/assets/assetService';
 
 export const runtime = 'nodejs';
 
@@ -23,7 +23,7 @@ export async function GET(request: Request) {
   const privateParam = searchParams.get('private');
   const search = searchParams.get('search') || undefined;
 
-  const data = listAssets({
+  const data = await listAssets({
     verified: verifiedParam === null ? undefined : verifiedParam === 'true',
     private: privateParam === null ? undefined : privateParam === 'true',
     search,
