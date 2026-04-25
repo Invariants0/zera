@@ -1,5 +1,5 @@
-import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 import { BarChart, Users, Eye, TrendingUp, Download, ArrowUpRight } from "lucide-react";
 
 export default function CreatorStudio() {

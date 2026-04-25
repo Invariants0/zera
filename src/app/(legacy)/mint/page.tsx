@@ -3,15 +3,15 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import { z } from "zod"; 
 import toast from "react-hot-toast";
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import { Input } from '@/components/ui/Input';
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Input } from "@/components/ui/Input";
 import { UploadCloud, CheckCircle2, ArrowRight, ShieldAlert, Lock, Unlock, Loader2 } from "lucide-react";
-import { useUpload } from '@/hooks/useUpload';
-import { useWallet } from '@/hooks/useWallet';
-import { registerAsset } from '@/services/contracts';
+import { useUpload } from "@/hooks/useUpload";
+import { useWallet } from "@/hooks/useWallet";
+import { registerAsset } from "@/services/contracts";
 
 const steps = ["Upload Media", "Metadata", "Creator Auth", "Privacy", "Mint"];
 
