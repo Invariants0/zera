@@ -535,3 +535,41 @@ export async function getAsset(assetIdParam: string): Promise<ContractOpResult> 
     },
   };
 }
+
+/**
+ * listAllOnChainAssets — Direct ledger scan.
+ * Returns all assets currently residing in the contract's public state.
+ */
+export async function listAllOnChainAssets(): Promise<any[]> {
+  const { runtime, providers, contractAddress } = await getContext();
+  const ledgerState = await getLedgerState(contractAddress, providers, runtime);
+  
+  const results = [];
+  for (const [id, asset] of ledgerState.assets) {
+    results.push({
+      id: id.toString(),
+      creatorPublicKeyHex: toHex(asset.creatorPublicKey),
+      assetHashHex: toHex(asset.assetHash),
+      metadataHashHex: toHex(asset.metadataHash),
+      timestamp: asset.timestamp.toString(),
+    });
+  }
+  return results;
+}
+
+/**
+ * getOnChainOwnerOf — Direct ownership scan.
+ */
+export async function getOnChainOwnerOf(assetIdParam: string): Promise<string | null> {
+  const assetId = toAssetId(assetIdParam);
+  const { runtime, providers, contractAddress } = await getContext();
+  const ledgerState = await getLedgerState(contractAddress, providers, runtime);
+  
+  if (!ledgerState.ownershipCommitments.member(assetId)) {
+    return null;
+  }
+  
+  const commitment = ledgerState.ownershipCommitments.lookup(assetId);
+  return toHex(commitment);
+}
+

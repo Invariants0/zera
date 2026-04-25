@@ -1,4 +1,5 @@
-import { runtimeStore } from '../store/runtimeStore';
+import { prisma } from '@/lib/prisma';
+import { transferOwnership } from '../contracts/assetRegistryService';
 
 const now = () => new Date().toISOString();
 
@@ -13,130 +14,138 @@ type BuyListingInput = {
   buyer: string;
 };
 
-export function createListing(input: CreateListingInput) {
-  const asset = runtimeStore.assets.get(input.assetId);
-  if (!asset) {
-    return { success: false, message: 'Asset not found' };
-  }
+export async function createListing(input: CreateListingInput) {
+  const asset = await prisma.asset.findUnique({ where: { id: input.assetId } });
+  if (!asset) return { success: false, message: 'Asset not found' };
+  if (!asset.verified) return { success: false, message: 'Only verified assets can be listed' };
+  if (asset.owner !== input.seller) return { success: false, message: 'Seller is not current owner' };
 
-  if (!asset.verified) {
-    return { success: false, message: 'Only verified assets can be listed' };
-  }
+  const listing = await prisma.listing.create({
+    data: {
+      id: `listing-${Date.now()}`,
+      assetId: input.assetId,
+      seller: input.seller,
+      price: input.price,
+      status: 'ACTIVE',
+    },
+  });
 
-  if (asset.owner !== input.seller) {
-    return { success: false, message: 'Seller is not current owner' };
-  }
-
-  const id = `listing-${Date.now()}`;
-  const listing = {
-    id,
-    assetId: input.assetId,
-    seller: input.seller,
-    price: input.price,
-    status: 'active' as const,
-    createdAt: now(),
-    updatedAt: now(),
-  };
-
-  runtimeStore.listings.set(id, listing);
-  runtimeStore.activities.unshift({
-    id: `act-${Date.now()}`,
-    type: 'list',
-    assetId: input.assetId,
-    assetTitle: asset.title ?? asset.id,
-    from: input.seller,
-    to: 'marketplace',
-    price: input.price,
-    timestamp: now(),
+  await prisma.activity.create({
+    data: {
+      id: `act-${Date.now()}`,
+      type: 'LIST',
+      assetId: input.assetId,
+      assetTitle: asset.title ?? asset.id,
+      from: input.seller,
+      to: 'marketplace',
+      price: input.price,
+    },
   });
 
   return { success: true, message: 'Listing created', data: listing };
 }
 
-export function cancelListing(listingId: string, seller: string) {
-  const listing = runtimeStore.listings.get(listingId);
-  if (!listing) {
-    return { success: false, message: 'Listing not found' };
-  }
+export async function cancelListing(listingId: string, seller: string) {
+  const listing = await prisma.listing.findUnique({ where: { id: listingId } });
+  if (!listing) return { success: false, message: 'Listing not found' };
+  if (listing.seller !== seller) return { success: false, message: 'Seller mismatch' };
 
-  if (listing.seller !== seller) {
-    return { success: false, message: 'Seller mismatch' };
-  }
+  const updated = await prisma.listing.update({
+    where: { id: listingId },
+    data: { status: 'CANCELLED' },
+  });
 
-  listing.status = 'cancelled';
-  listing.updatedAt = now();
-  runtimeStore.listings.set(listingId, listing);
-
-  return { success: true, message: 'Listing cancelled', data: listing };
+  return { success: true, message: 'Listing cancelled', data: updated };
 }
 
-export function buyListing(input: BuyListingInput) {
-  const listing = runtimeStore.listings.get(input.listingId);
-  if (!listing || listing.status !== 'active') {
+export async function buyListing(input: BuyListingInput) {
+  const listing = await prisma.listing.findUnique({
+    where: { id: input.listingId },
+    include: { asset: true },
+  });
+
+  if (!listing || listing.status !== 'ACTIVE') {
     return { success: false, message: 'Listing is not active' };
   }
 
-  const asset = runtimeStore.assets.get(listing.assetId);
-  if (!asset) {
-    return { success: false, message: 'Asset not found for listing' };
+  const asset = listing.asset;
+
+  // Call Midnight contract immediately
+  let txHash: string | undefined;
+  if (asset.contractAssetId) {
+    try {
+      const tx = await transferOwnership({
+        assetId: asset.contractAssetId,
+        from: listing.seller,
+        to: input.buyer,
+        price: listing.price,
+      });
+      txHash = (tx as any)?.transactionHash;
+    } catch (err) {
+      return { success: false, message: `Midnight transfer failed: ${err instanceof Error ? err.message : String(err)}` };
+    }
   }
 
-  listing.status = 'sold';
-  listing.buyer = input.buyer;
-  listing.updatedAt = now();
-  runtimeStore.listings.set(input.listingId, listing);
+  const [updatedListing, updatedAsset] = await prisma.$transaction([
+    prisma.listing.update({
+      where: { id: input.listingId },
+      data: { status: 'SOLD', buyer: input.buyer, txHash },
+    }),
+    prisma.asset.update({
+      where: { id: asset.id },
+      data: { owner: input.buyer },
+    }),
+  ]);
 
-  const previousOwner = asset.owner;
-  asset.owner = input.buyer;
-  asset.updatedAt = now();
-  runtimeStore.assets.set(asset.id, asset);
-
-  runtimeStore.activities.unshift({
-    id: `act-${Date.now()}`,
-    type: 'sale',
-    assetId: asset.id,
-    assetTitle: asset.title ?? asset.id,
-    from: previousOwner,
-    to: input.buyer,
-    price: listing.price,
-    timestamp: now(),
+  await prisma.activity.create({
+    data: {
+      id: `act-${Date.now()}`,
+      type: 'SALE',
+      assetId: asset.id,
+      assetTitle: asset.title ?? asset.id,
+      from: listing.seller,
+      to: input.buyer,
+      price: listing.price,
+      txHash,
+    },
   });
 
-  return {
-    success: true,
-    message: 'Listing purchased',
-    data: {
-      listing,
-      asset,
-    },
-  };
+  return { success: true, message: 'Listing purchased', data: { listing: updatedListing, asset: updatedAsset } };
 }
 
-export function listListings() {
-  return Array.from(runtimeStore.listings.values())
-    .filter((entry) => entry.status === 'active')
-    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+export async function listListings() {
+  return prisma.listing.findMany({
+    where: { status: 'ACTIVE' },
+    orderBy: { createdAt: 'desc' },
+    include: { asset: true },
+  });
 }
 
-export function listActivities(limit: number) {
-  return runtimeStore.activities.slice(0, limit);
+export async function listActivities(limit: number) {
+  return prisma.activity.findMany({
+    orderBy: { timestamp: 'desc' },
+    take: limit,
+  });
 }
 
-export function getMarketplaceStats() {
-  const listings = Array.from(runtimeStore.listings.values());
-  const sold = listings.filter((entry) => entry.status === 'sold');
+export async function getMarketplaceStats() {
+  const [sold, allListings, allAssets] = await prisma.$transaction([
+    prisma.listing.findMany({ where: { status: 'SOLD' } }),
+    prisma.listing.findMany(),
+    prisma.asset.findMany({ select: { owner: true } }),
+  ]);
 
   const totalVolume = sold.reduce((acc, entry) => {
     const value = Number.parseFloat(entry.price.replace(/[^0-9.]/g, ''));
     return Number.isFinite(value) ? acc + value : acc;
   }, 0);
 
-  const uniqueOwners = new Set(Array.from(runtimeStore.assets.values()).map((asset) => asset.owner)).size;
+  const uniqueOwners = new Set(allAssets.map((a) => a.owner)).size;
 
   return {
     totalVolume: `${totalVolume.toFixed(2)} ZERA`,
     totalSales: sold.length,
-    activeListings: listings.filter((entry) => entry.status === 'active').length,
+    activeListings: allListings.filter((l) => l.status === 'ACTIVE').length,
     uniqueOwners,
   };
 }
