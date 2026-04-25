@@ -1,12 +1,13 @@
 import {
-  assetExists,
-  getAsset,
   registerAsset,
   transferOwnership,
   verifyAssetAuthenticity,
   verifyOwnership,
+  assetExists,
+  getAsset,
 } from '../contracts/assetRegistryService';
-import { runtimeStore, type AssetRecord } from '../store/runtimeStore';
+import { prisma } from '@/lib/prisma';
+import type { Asset } from '@prisma/client';
 
 type CreateAssetInput = {
   id?: string;
@@ -26,13 +27,11 @@ type ListAssetFilters = {
   search?: string;
 };
 
-const now = () => new Date().toISOString();
-
-function toClientAsset(asset: AssetRecord) {
+function toClientAsset(asset: Asset) {
   return {
     id: asset.id,
     title: asset.title ?? asset.id,
-    description: asset.description,
+    description: asset.description ?? undefined,
     creator: asset.creator,
     owner: asset.owner,
     price: asset.price ?? '0 ZERA',
@@ -41,8 +40,8 @@ function toClientAsset(asset: AssetRecord) {
     badges: asset.badges ?? (asset.verified ? ['verified'] : []),
     verified: asset.verified,
     private: asset.isPrivate,
-    createdAt: asset.createdAt,
-    updatedAt: asset.updatedAt,
+    createdAt: asset.createdAt.toISOString(),
+    updatedAt: asset.updatedAt.toISOString(),
   };
 }
 
@@ -56,32 +55,33 @@ export async function createAsset(input: CreateAssetInput) {
     isPrivate: input.isPrivate,
   });
 
-  const record: AssetRecord = {
-    id,
-    contractAssetId: onChain.assetIndex ?? null,
-    metadataUri: input.metadataUri,
-    creator: input.creator,
-    owner: input.creator,
-    isPrivate: input.isPrivate,
-    verified: true,
-    title: input.title,
-    description: input.description,
-    imageUrl: input.imageUrl,
-    price: input.price,
-    badges: input.badges,
-    createdAt: now(),
-    updatedAt: now(),
-  };
+  const record = await prisma.asset.create({
+    data: {
+      id,
+      contractAssetId: onChain.assetIndex ?? null,
+      metadataUri: input.metadataUri,
+      creator: input.creator,
+      owner: input.creator,
+      isPrivate: input.isPrivate,
+      verified: true,
+      title: input.title,
+      description: input.description,
+      imageUrl: input.imageUrl,
+      price: input.price,
+      badges: input.badges ?? [],
+    },
+  });
 
-  runtimeStore.assets.set(id, record);
-  runtimeStore.activities.unshift({
-    id: `act-${Date.now()}`,
-    type: 'mint',
-    assetId: id,
-    assetTitle: record.title ?? id,
-    from: 'mint',
-    to: input.creator,
-    timestamp: now(),
+  await prisma.activity.create({
+    data: {
+      id: `act-${Date.now()}`,
+      type: 'MINT',
+      assetId: id,
+      assetTitle: record.title ?? id,
+      from: 'mint',
+      to: input.creator,
+      txHash: onChain.transactionHash,
+    },
   });
 
   return {
@@ -94,143 +94,99 @@ export async function createAsset(input: CreateAssetInput) {
   };
 }
 
-export function listAssets(filters?: ListAssetFilters) {
-  let values = Array.from(runtimeStore.assets.values());
+export async function listAssets(filters?: ListAssetFilters) {
+  const where: Record<string, unknown> = {};
 
-  if (typeof filters?.verified === 'boolean') {
-    values = values.filter((asset) => asset.verified === filters.verified);
-  }
-
-  if (typeof filters?.private === 'boolean') {
-    values = values.filter((asset) => asset.isPrivate === filters.private);
-  }
-
+  if (typeof filters?.verified === 'boolean') where['verified'] = filters.verified;
+  if (typeof filters?.private === 'boolean') where['isPrivate'] = filters.private;
   if (filters?.search) {
-    const q = filters.search.toLowerCase();
-    values = values.filter((asset) => {
-      const title = (asset.title ?? '').toLowerCase();
-      const creator = asset.creator.toLowerCase();
-      const id = asset.id.toLowerCase();
-      return title.includes(q) || creator.includes(q) || id.includes(q);
-    });
+    const q = filters.search;
+    where['OR'] = [
+      { title: { contains: q, mode: 'insensitive' } },
+      { creator: { contains: q, mode: 'insensitive' } },
+      { id: { contains: q, mode: 'insensitive' } },
+    ];
   }
 
-  return values.map(toClientAsset);
+  const assets = await prisma.asset.findMany({
+    where,
+    orderBy: { createdAt: 'desc' },
+  });
+
+  return assets.map(toClientAsset);
 }
 
-export function getAssetById(id: string) {
-  const asset = runtimeStore.assets.get(id);
-  if (!asset) {
-    return null;
-  }
+export async function getAssetById(id: string) {
+  const asset = await prisma.asset.findUnique({ where: { id } });
+  if (!asset) return null;
   return toClientAsset(asset);
 }
 
-export function getAssetsByOwner(ownerAddress: string) {
-  return Array.from(runtimeStore.assets.values())
-    .filter((asset) => asset.owner === ownerAddress)
-    .map(toClientAsset);
+export async function getAssetsByOwner(ownerAddress: string) {
+  const assets = await prisma.asset.findMany({
+    where: { owner: ownerAddress },
+    orderBy: { createdAt: 'desc' },
+  });
+  return assets.map(toClientAsset);
 }
 
 export async function verifyAssetById(id: string) {
-  const asset = runtimeStore.assets.get(id);
-  if (!asset) {
-    return {
-      success: false,
-      message: 'Asset not found',
-      data: { verified: false },
-    };
-  }
-
+  const asset = await prisma.asset.findUnique({ where: { id } });
+  if (!asset) return { success: false, message: 'Asset not found', data: { verified: false } };
   if (!asset.contractAssetId) {
-    return {
-      success: true,
-      message: 'Asset has no linked contract id yet',
-      data: { verified: asset.verified },
-    };
+    return { success: true, message: 'Asset has no linked contract id yet', data: { verified: asset.verified } };
   }
-
   const result = await verifyAssetAuthenticity(asset.contractAssetId);
   return {
     success: true,
     message: 'Asset verification complete',
-    data: {
-      ...result.data,
-      verified: result.data?.verified ?? asset.verified,
-    },
+    data: { ...result.data, verified: (result.data as any)?.verified ?? asset.verified },
   };
 }
 
 export async function transferAsset(id: string, to: string, from: string, price?: string) {
-  const asset = runtimeStore.assets.get(id);
-  if (!asset) {
-    return {
-      success: false,
-      message: 'Asset not found',
-    };
-  }
+  const asset = await prisma.asset.findUnique({ where: { id } });
+  if (!asset) return { success: false, message: 'Asset not found' };
+  if (!asset.contractAssetId) return { success: false, message: 'Asset has no contract asset id' };
 
-  if (!asset.contractAssetId) {
-    return {
-      success: false,
-      message: 'Asset does not have a contract asset id for transfer',
-    };
-  }
+  const tx = await transferOwnership({ assetId: asset.contractAssetId, from, to, price });
 
-  const tx = await transferOwnership({
-    assetId: asset.contractAssetId,
-    from,
-    to,
-    price,
+  const updated = await prisma.asset.update({
+    where: { id },
+    data: { owner: to },
   });
 
-  asset.owner = to;
-  asset.updatedAt = now();
-  runtimeStore.assets.set(id, asset);
-
-  runtimeStore.activities.unshift({
-    id: `act-${Date.now()}`,
-    type: 'transfer',
-    assetId: id,
-    assetTitle: asset.title ?? id,
-    from,
-    to,
-    price,
-    timestamp: now(),
+  await prisma.activity.create({
+    data: {
+      id: `act-${Date.now()}`,
+      type: 'TRANSFER',
+      assetId: id,
+      assetTitle: asset.title ?? id,
+      from,
+      to,
+      price,
+      txHash: (tx as any)?.transactionHash,
+    },
   });
 
   return {
     success: true,
     message: 'Asset ownership transferred',
-    data: {
-      transaction: tx,
-      asset: toClientAsset(asset),
-    },
+    data: { transaction: tx, asset: toClientAsset(updated) },
   };
 }
 
 export async function verifyOwnershipById(id: string, ownerAddress: string) {
-  const asset = runtimeStore.assets.get(id);
+  const asset = await prisma.asset.findUnique({ where: { id } });
   if (!asset || !asset.contractAssetId) {
-    return {
-      success: false,
-      message: 'Asset not found',
-      data: {
-        verified: false,
-      },
-    };
+    return { success: false, message: 'Asset not found', data: { verified: false } };
   }
-
-  const chainOwnership = await verifyOwnership({
-    assetId: asset.contractAssetId,
-    claimedOwner: ownerAddress,
-  });
-
+  const chainOwnership = await verifyOwnership({ assetId: asset.contractAssetId, claimedOwner: ownerAddress });
   return {
     success: true,
     message: 'Ownership checked',
     data: {
-      verified: chainOwnership.data?.verified ?? false,
+      verified: (chainOwnership.data as any)?.verified ?? false,
       proof: `ownership-proof-${id}-${Date.now()}`,
       contract: chainOwnership,
     },
@@ -238,16 +194,10 @@ export async function verifyOwnershipById(id: string, ownerAddress: string) {
 }
 
 export async function syncAssetFromContract(id: string) {
-  const asset = runtimeStore.assets.get(id);
-  if (!asset || !asset.contractAssetId) {
-    return null;
-  }
-
+  const asset = await prisma.asset.findUnique({ where: { id } });
+  if (!asset || !asset.contractAssetId) return null;
   const exists = await assetExists(asset.contractAssetId);
-  if (!exists.data?.exists) {
-    return null;
-  }
-
+  if (!exists.data?.exists) return null;
   const chainAsset = await getAsset(asset.contractAssetId);
   return chainAsset.data;
 }
