@@ -1,18 +1,29 @@
 import { NextResponse } from 'next/server';
-
-import { listAssets } from '../../../server/assets/assetService';
+import { prisma } from '@/lib/prisma';
 
 export const runtime = 'nodejs';
 
 export async function GET() {
-  const rows = listAssets().map((asset) => ({
-    id: asset.id,
-    creator: asset.creator,
-    verification: asset.verified ? 'Verified' : 'Pending',
-    ownership: asset.private ? 'Private' : 'Provable',
-    compliance: asset.private ? 'KYC-Tier-1' : 'Unrestricted',
-    updated: asset.updatedAt,
+  const assets = await prisma.asset.findMany({
+    where: { verified: true },
+    orderBy: { createdAt: 'desc' },
+    select: {
+      id: true,
+      creator: true,
+      isPrivate: true,
+      verified: true,
+      updatedAt: true,
+    },
+  });
+
+  const entries = assets.map((a) => ({
+    id: a.id,
+    creator: a.creator,
+    verification: a.verified ? 'Verified' : 'Pending',
+    ownership: a.isPrivate ? 'Private' : 'Provable',
+    compliance: 'ZK-Certified',
+    updated: a.updatedAt.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
   }));
 
-  return NextResponse.json(rows, { status: 200 });
+  return NextResponse.json(entries, { status: 200 });
 }
