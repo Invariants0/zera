@@ -3,8 +3,8 @@ import { indexerPublicDataProvider } from '@midnight-ntwrk/midnight-js-indexer-p
 import { httpClientProofProvider } from '@midnight-ntwrk/midnight-js-http-client-proof-provider';
 import { NodeZkConfigProvider } from '@midnight-ntwrk/midnight-js-node-zk-config-provider';
 import { levelPrivateStateProvider } from '@midnight-ntwrk/midnight-js-level-private-state-provider';
-import { MidnightWalletProvider } from './wallet.js';
-import { type NetworkConfig } from './config.js';
+import { MidnightWalletProvider } from './wallet';
+import { type NetworkConfig } from './config';
 
 export type ZeraCircuits = 'registerAsset' | 'verifyAsset' | 'assetExists' | 'getAsset' | 'assignOwnership' | 'transferOwnership' | 'verifyOwnership';
 
