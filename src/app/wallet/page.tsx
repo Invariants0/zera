@@ -9,7 +9,6 @@ import {
   Link as LinkIcon,
   RefreshCw,
   Unlink,
-  Wallet as WalletIcon,
 } from "lucide-react";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
@@ -125,9 +124,18 @@ export default function WalletPage() {
               <p className="font-mono text-[10px] uppercase tracking-widest text-black/70 mb-1">
                 Total Balance
               </p>
-              <h2 className="font-grotesk text-3xl sm:text-4xl font-bold mb-5 sm:mb-6 break-words">
-                {walletBalance}
-              </h2>
+              <div className="mb-2">
+                <h2 className="font-grotesk text-3xl sm:text-4xl font-bold break-words">
+                  {balanceBreakdown.night.total}
+                </h2>
+                <p className="font-mono text-xs text-black/60 mt-1">NIGHT Balance</p>
+              </div>
+              <div className="mb-5 sm:mb-6">
+                <h3 className="font-grotesk text-xl sm:text-2xl font-bold break-words">
+                  {walletBalance}
+                </h3>
+                <p className="font-mono text-xs text-black/60">DUST Balance</p>
+              </div>
               <div className="rounded-xl bg-black/5 border border-black/10 p-3">
                 <div className="flex items-center justify-between gap-3 mb-2">
                   <p className="font-mono text-[10px] uppercase tracking-widest text-black/60">Main Address</p>
@@ -146,9 +154,29 @@ export default function WalletPage() {
                   {walletAddress ?? "No wallet connected"}
                 </p>
               </div>
-              <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="rounded-xl bg-black/5 border border-black/10 p-3">
-                  <p className="font-mono text-[10px] uppercase tracking-widest text-black/60">Shielded</p>
+                  <p className="font-mono text-[10px] uppercase tracking-widest text-black/60 mb-2">NIGHT Breakdown</p>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-mono text-[10px] text-black/70">Shielded:</span>
+                      <span className="font-mono text-xs font-bold text-black">{balanceBreakdown.night.shielded}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-mono text-[10px] text-black/70">Unshielded:</span>
+                      <span className="font-mono text-xs font-bold text-black">{balanceBreakdown.night.unshielded}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="rounded-xl bg-black/5 border border-black/10 p-3">
+                  <p className="font-mono text-[10px] uppercase tracking-widest text-black/60 mb-2">DUST</p>
+                  <p className="font-grotesk text-base font-bold break-words">{balanceBreakdown.dust}</p>
+                  <p className="font-mono text-[9px] text-black/60 mt-1">Transaction fees</p>
+                </div>
+              </div>
+              <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="rounded-xl bg-black/5 border border-black/10 p-3">
+                  <p className="font-mono text-[10px] uppercase tracking-widest text-black/60">Shielded Tokens</p>
                   <div className="mt-2 space-y-1">
                     {Object.entries(balanceBreakdown.shielded).length > 0 ? (
                       Object.entries(balanceBreakdown.shielded).map(([token, amount]) => (
@@ -158,12 +186,12 @@ export default function WalletPage() {
                         </div>
                       ))
                     ) : (
-                      <p className="font-grotesk text-base font-bold">0</p>
+                      <p className="font-mono text-[10px] text-black/50">No tokens</p>
                     )}
                   </div>
                 </div>
                 <div className="rounded-xl bg-black/5 border border-black/10 p-3">
-                  <p className="font-mono text-[10px] uppercase tracking-widest text-black/60">Unshielded</p>
+                  <p className="font-mono text-[10px] uppercase tracking-widest text-black/60">Unshielded Tokens</p>
                   <div className="mt-2 space-y-1">
                     {Object.entries(balanceBreakdown.unshielded).length > 0 ? (
                       Object.entries(balanceBreakdown.unshielded).map(([token, amount]) => (
@@ -173,13 +201,9 @@ export default function WalletPage() {
                         </div>
                       ))
                     ) : (
-                      <p className="font-grotesk text-base font-bold">0</p>
+                      <p className="font-mono text-[10px] text-black/50">No tokens</p>
                     )}
                   </div>
-                </div>
-                <div className="rounded-xl bg-black/5 border border-black/10 p-3">
-                  <p className="font-mono text-[10px] uppercase tracking-widest text-black/60">Dust</p>
-                  <p className="font-grotesk text-base font-bold break-words mt-2">{balanceBreakdown.dust}</p>
                 </div>
               </div>
               <div className="mt-4 flex flex-col sm:flex-row gap-3">
