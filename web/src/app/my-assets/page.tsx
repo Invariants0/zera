@@ -12,7 +12,7 @@ import Link from "next/link";
 import toast from "react-hot-toast";
 
 export default function MyAssets() {
-  const { isConnected, connectWallet } = useWallet();
+  const { isConnected, connectWallet, walletAddress } = useWallet();
   const { ownedAssets, loading, error, refetch } = useOwnerAssets();
 
   if (!isConnected) {
@@ -49,7 +49,11 @@ export default function MyAssets() {
               btn.disabled = true;
               const tid = toast.loading("Verifying on-chain state...");
               try {
-                const res = await fetch('/api/contract/sync', { method: 'POST' });
+                const res = await fetch('/api/contract/sync', { 
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ walletAddress })
+                });
                 const data = await res.json();
                 if (data.success) {
                   toast.success(data.message, { id: tid });

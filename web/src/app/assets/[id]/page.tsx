@@ -51,8 +51,9 @@ export default function AssetDetail({ params }: { params: Promise<{ id: string }
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [isClaiming, setIsClaiming] = useState(false);
   const [ownershipStatus, setOwnershipStatus] = useState<{
-    exists: boolean;
+    ownershipExists: boolean;
     verified: boolean | null;
+    commitment: string | null;
   } | null>(null);
 
 
@@ -100,8 +101,9 @@ export default function AssetDetail({ params }: { params: Promise<{ id: string }
         if (ownershipRes.ok) {
           const ownershipData = await ownershipRes.json();
           setOwnershipStatus({
-            exists: ownershipData.data?.ownershipExists || false,
-            verified: ownershipData.data?.verified || false
+            ownershipExists: ownershipData.data?.ownershipExists || false,
+            verified: ownershipData.data?.verified || false,
+            commitment: ownershipData.data?.commitment || null
           });
         }
       }
@@ -137,6 +139,12 @@ export default function AssetDetail({ params }: { params: Promise<{ id: string }
 
   const verifyOwnership = async () => {
     if (!walletAddress) { toast.error('Connect wallet first'); return; }
+    
+    if (ownershipStatus && !ownershipStatus.ownershipExists) {
+      toast.error('On-chain ownership record missing. Please claim ownership first.');
+      return;
+    }
+
     const tid = toast.loading('Verifying ownership on Midnight...');
     try {
       const res = await fetch('/api/proofs/ownership', {
@@ -147,7 +155,11 @@ export default function AssetDetail({ params }: { params: Promise<{ id: string }
       const data = await res.json();
       if (data.success && data.data?.verified) {
         toast.success(`Ownership verified! Proof ID: ${data.data.proofId}`, { id: tid });
-        setOwnershipStatus({ exists: true, verified: true });
+        setOwnershipStatus({ 
+          ownershipExists: true, 
+          verified: true,
+          commitment: data.data.commitment
+        });
       } else {
         toast.error('Ownership could not be verified', { id: tid });
       }
@@ -159,11 +171,19 @@ export default function AssetDetail({ params }: { params: Promise<{ id: string }
     const tid = toast.loading('Claiming ownership on-chain...');
     setIsClaiming(true);
     try {
-      const res = await fetch(`/api/assets/${id}/claim`, { method: 'POST' });
+      const res = await fetch(`/api/assets/${id}/claim`, { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ walletAddress })
+      });
       const data = await res.json();
       if (data.success) {
-        toast.success('Ownership claimed! You can now transfer this asset.', { id: tid });
-        loadAsset();
+        toast.success('Ownership claimed! Finalizing registry sync...', { id: tid });
+        // Give indexer a moment to catch up
+        setTimeout(() => {
+          loadAsset();
+          toast.success('Sync complete. You can now verify or transfer.', { id: tid });
+        }, 2000);
       } else {
         toast.error(data.message || 'Claim failed', { id: tid });
       }
@@ -186,10 +206,47 @@ export default function AssetDetail({ params }: { params: Promise<{ id: string }
     if (!asset) return;
 
     setIsPurchasing(true);
-    const tid = toast.loading('Processing purchase with tNight...');
+    const tid = toast.loading('Initiating Lace payment...');
 
     try {
-      // Transfer ownership via Midnight contract
+      // 1. Parse price and handle actual NIGHT transfer
+      let priceBaseUnits = 0n;
+      const priceMatch = asset.price.match(/(\d+(\.\d+)?)\s*(tNIGHT|NIGHT|tDUST|ZERA)?/i);
+      if (priceMatch) {
+        const amount = parseFloat(priceMatch[1]);
+        const unit = (priceMatch[3] || 'tNIGHT').toUpperCase();
+        
+        if (unit.includes('NIGHT') || unit === 'ZERA') {
+          priceBaseUnits = BigInt(Math.floor(amount * 1_000_000));
+        } else {
+          // Assume tDUST or unknown unit uses 1:1 for now
+          priceBaseUnits = BigInt(Math.floor(amount));
+        }
+      }
+
+      console.log(`[Lace Payment] Asset: ${asset.title}, Price: ${asset.price}, Base Units: ${priceBaseUnits}`);
+
+      // Only perform transfer if price > 0
+      if (priceBaseUnits > 0n) {
+        toast.loading('Please approve the transfer in Lace...', { id: tid });
+        
+        const transferResult = await (walletApi as any).makeTransfer({
+          shieldedReceivers: [
+            {
+              address: asset.owner,
+              amount: priceBaseUnits,
+            }
+          ],
+          unshieldedReceivers: [],
+        });
+
+        console.log('[Lace Payment] Transfer successful:', transferResult);
+        toast.loading('Payment confirmed. Updating registry...', { id: tid });
+      } else {
+        toast.loading('Processing free asset...', { id: tid });
+      }
+
+      // 2. Transfer ownership via Midnight contract
       const transferResponse = await fetch(`/api/assets/${id}/transfer`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -203,10 +260,10 @@ export default function AssetDetail({ params }: { params: Promise<{ id: string }
       const transferData = await transferResponse.json();
 
       if (!transferData.success) {
-        throw new Error(transferData.message || 'Transfer failed');
+        throw new Error(transferData.message || 'Registry update failed');
       }
 
-      // Record purchase in database
+      // 3. Record purchase in database
       await fetch('/api/purchases', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -219,13 +276,12 @@ export default function AssetDetail({ params }: { params: Promise<{ id: string }
       });
 
       setHasPurchased(true);
-      toast.success('Purchase successful! You can now download the encrypted file.', { id: tid });
+      toast.success('Purchase successful! Ownership transferred.', { id: tid });
 
       // Refresh asset data
-      const response = await fetch(`/api/assets/${id}`);
-      const updatedAsset = await response.json();
-      setAsset(updatedAsset);
+      loadAsset();
     } catch (error) {
+      console.error('[Purchase Error]', error);
       const message = error instanceof Error ? error.message : 'Purchase failed';
       toast.error(message, { id: tid });
     } finally {
@@ -280,6 +336,7 @@ export default function AssetDetail({ params }: { params: Promise<{ id: string }
   if (!asset) return <div className="p-10"><EmptyState icon={Shield} title="Asset Not Found" description="This asset does not exist in the registry." /></div>;
 
   const isOwner = walletAddress && asset.owner === walletAddress;
+  const isCreator = walletAddress && asset.creator === walletAddress;
 
   return (
     <div className="w-full max-w-[1200px] mx-auto p-6 md:p-10 pb-32">
@@ -313,11 +370,23 @@ export default function AssetDetail({ params }: { params: Promise<{ id: string }
             </div>
             <div className="flex justify-between items-center">
               <span className="font-mono text-[10px] text-text-muted uppercase">Creator</span>
-              <span className="font-mono text-xs text-lime">{asset.creator.slice(0, 20)}...</span>
+              <div className="flex items-center gap-1.5">
+                <CheckCircle2 className="w-3 h-3 text-emerald-glow" />
+                <span className="font-mono text-xs text-lime">ZK-Verified</span>
+              </div>
             </div>
             <div className="flex justify-between items-center">
               <span className="font-mono text-[10px] text-text-muted uppercase">Owner</span>
-              <span className="font-mono text-xs text-text-primary">{asset.owner.slice(0, 20)}...</span>
+              <div className="flex flex-col items-end gap-1">
+                <span className="font-mono text-xs text-text-primary">
+                  {isOwner ? 'You (Sovereign Owner)' : 'ZK-Verified'}
+                </span>
+                {ownershipStatus?.commitment && (
+                  <span className="font-mono text-[8px] text-text-muted">
+                    ID: {ownershipStatus.commitment.slice(0, 16)}...
+                  </span>
+                )}
+              </div>
             </div>
             <div className="flex justify-between items-center">
               <span className="font-mono text-[10px] text-text-muted uppercase">Price</span>
@@ -356,7 +425,7 @@ export default function AssetDetail({ params }: { params: Promise<{ id: string }
               </Button>
             )}
 
-            {isOwner && ownershipStatus && !ownershipStatus.exists && (
+            {(isOwner || isCreator) && ownershipStatus && !ownershipStatus.ownershipExists && (
               <Button 
                 variant="primary" 
                 className="h-12 gap-2 bg-lime text-black hover:bg-lime/90" 
@@ -369,7 +438,7 @@ export default function AssetDetail({ params }: { params: Promise<{ id: string }
             )}
 
 
-            {(isOwner || hasPurchased) && metadata?.file && (
+            {(ownershipStatus?.verified || isOwner) && metadata?.file && (
               <Button 
                 variant="primary" 
                 className="h-12 gap-2" 

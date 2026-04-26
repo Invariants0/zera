@@ -1,18 +1,27 @@
 import { NextResponse } from 'next/server';
-import { assignOwnership } from '@/server/contracts/assetRegistryService';
+import { claimAsset } from '@/server/contracts/assetRegistryService';
 import { prisma } from '@/lib/prisma';
 
 export const runtime = 'nodejs';
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
+    const body = await request.json().catch(() => ({}));
+    const walletAddress = body.walletAddress;
 
-    // 1. Assign ownership on-chain
-    const result = await assignOwnership({ assetId: id });
+    if (!walletAddress) {
+      return NextResponse.json({ success: false, message: 'Wallet address required' }, { status: 400 });
+    }
+
+    // 1. Claim/Transfer ownership on-chain
+    const result = await claimAsset({ 
+      assetId: id,
+      claimantAddress: walletAddress 
+    });
 
     if (!result.success) {
       return NextResponse.json(result, { status: 400 });
@@ -25,7 +34,7 @@ export async function POST(
     if (asset) {
       await prisma.asset.update({
         where: { id },
-        data: { owner: asset.creator } // Default back to creator for now
+        data: { owner: walletAddress }
       });
     }
 

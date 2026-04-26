@@ -1,19 +1,39 @@
+"use client";
+import { useEffect, useState } from "react";
 import { Card } from "../../components/ui/Card";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
-import { Search, Filter, Download, FileKey, CheckCircle2, XCircle } from "lucide-react";
-
-const logsData = [
-  { id: "PR-8921", asset: "Quantum Core Alpha", type: "Authenticity", user: "0x7F...3A19", time: "10 mins ago", status: "Success" },
-  { id: "PR-8920", asset: "Manhattan Prime Fraction", type: "Ownership (ZK)", user: "Hidden", time: "1 hour ago", status: "Success" },
-  { id: "PR-8919", asset: "Neon Nexus Orb", type: "Transfer Eligibility", user: "Institutional Vault", time: "3 hours ago", status: "Failed" },
-  { id: "PR-8918", asset: "Zero-Knowledge Artifact", type: "Metadata Integrity", user: "ZK-Labs", time: "5 hours ago", status: "Success" },
-  { id: "PR-8917", asset: "Cyberspace Fragment", type: "Authenticity", user: "0x99...EE10", time: "1 day ago", status: "Success" },
-  { id: "PR-8916", asset: "Cypher Punk #002", type: "Ownership (ZK)", user: "Hidden", time: "2 days ago", status: "Success" },
-];
+import { Search, Filter, Download, FileKey, CheckCircle2, XCircle, RefreshCw } from "lucide-react";
+import { Loading } from "../../components/ui/Loading";
 
 export default function ProofLogs() {
+  const [logs, setLogs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+
+  const fetchLogs = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/proofs/ownership');
+      const data = await res.json();
+      setLogs(data);
+    } catch (err) {
+      console.error('Failed to fetch logs:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLogs();
+  }, []);
+
+  const filteredLogs = logs.filter(log => 
+    log.asset.toLowerCase().includes(search.toLowerCase()) ||
+    log.id.toLowerCase().includes(search.toLowerCase()) ||
+    log.user.toLowerCase().includes(search.toLowerCase())
+  );
   return (
     <div className="w-full max-w-[1600px] mx-auto p-6 md:p-10 pb-32">
       
@@ -63,7 +83,15 @@ export default function ProofLogs() {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {logsData.map((row, i) => (
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-10 text-center"><Loading text="Syncing logs..." /></td>
+                </tr>
+              ) : filteredLogs.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-10 text-center text-text-muted">No proofs found</td>
+                </tr>
+              ) : filteredLogs.map((row, i) => (
                 <tr key={i} className="hover:bg-white/5 transition-colors cursor-pointer group">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2 text-text-primary group-hover:text-lime transition-colors">

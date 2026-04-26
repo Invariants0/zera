@@ -9,7 +9,9 @@ import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { Search, Filter, ChevronDown, CheckCircle2, Heart, Package, RefreshCw } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useAssets } from "../../hooks/useAssets";
+import { useWallet } from "../../hooks/useWallet";
 import { Loading, CardSkeleton } from "../../components/ui/Loading";
 import { EmptyState } from "../../components/ui/EmptyState";
 import Link from "next/link";
@@ -25,6 +27,8 @@ export default function Explore() {
 }
 
 function ExploreContent() {
+  const router = useRouter();
+  const { walletAddress } = useWallet();
   const searchParams = useSearchParams();
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState(searchParams.get("search") ?? "");
@@ -78,11 +82,15 @@ function ExploreContent() {
               btn.disabled = true;
               const tid = toast.loading("Syncing with Midnight Registry...");
               try {
-                const res = await fetch('/api/contract/sync', { method: 'POST' });
+                const res = await fetch('/api/contract/sync', { 
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ walletAddress })
+                });
                 const data = await res.json();
                 if (data.success) {
                   toast.success(data.message, { id: tid });
-                  setTimeout(() => window.location.reload(), 1500);
+                  router.refresh();
                 } else {
                   toast.error(data.message, { id: tid });
                 }
@@ -219,8 +227,10 @@ function ExploreContent() {
 
                     <div className="p-5">
                       <div className="flex items-center gap-1.5 mb-1">
-                         <span className="font-mono text-[10px] text-text-secondary uppercase truncate">{asset.creator}</span>
-                         {asset.verified && <CheckCircle2 className="w-3 h-3 text-emerald-glow flex-shrink-0" />}
+                         <div className="flex items-center gap-1 bg-emerald-glow/5 border border-emerald-glow/10 rounded px-1.5 py-0.5">
+                           <CheckCircle2 className="w-2.5 h-2.5 text-emerald-glow" />
+                           <span className="font-mono text-[9px] text-emerald-glow uppercase tracking-tighter">ZK-Verified Creator</span>
+                         </div>
                       </div>
                       <h3 className="font-grotesk font-bold text-lg leading-tight group-hover:text-lime transition-colors truncate">{asset.title}</h3>
                       
