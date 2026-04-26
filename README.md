@@ -65,8 +65,8 @@ ZERA unlocks participation from markets that traditional NFT platforms cannot re
 This is where digital assets transition from speculative instruments to **financial infrastructure**.  
 > [!IMPORTANT]  
 > When trust becomes provable, markets expand.
-
 ---
+<img width="1820" height="864" alt="ChatGPT Image Apr 27, 2026, 02_46_25 AM" src="https://github.com/user-attachments/assets/af4de729-1c33-4b46-abca-62e182c85b2e" />
 
 ## Product
 
