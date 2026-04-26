@@ -34,21 +34,14 @@ function ExploreContent() {
   const [searchQuery, setSearchQuery] = useState(searchParams.get("search") ?? "");
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [privateOnly, setPrivateOnly] = useState(false);
+  const [priceRange, setPriceRange] = useState({ min: "", max: "" });
 
   useEffect(() => {
     setSearchQuery(searchParams.get("search") ?? "");
   }, [searchParams]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery((e.target as HTMLInputElement).value);
-  };
-
-  const handleVerifiedChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setVerifiedOnly((e.target as HTMLInputElement).checked);
-  };
-
-  const handlePrivateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPrivateOnly(e.currentTarget.checked);
+    setSearchQuery(e.target.value);
   };
 
   const { assets, loading, error } = useAssets({
@@ -60,121 +53,177 @@ function ExploreContent() {
 
   const filteredAssets = assets.filter(asset => {
     if (searchQuery) {
-      return asset.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-             asset.creator.toLowerCase().includes(searchQuery.toLowerCase());
+      const match = asset.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                   asset.creator.toLowerCase().includes(searchQuery.toLowerCase());
+      if (!match) return false;
     }
+    
+    if (priceRange.min) {
+      const price = parseFloat(asset.price.replace(/[^\d.]/g, ''));
+      if (price < parseFloat(priceRange.min)) return false;
+    }
+    if (priceRange.max) {
+      const price = parseFloat(asset.price.replace(/[^\d.]/g, ''));
+      if (price > parseFloat(priceRange.max)) return false;
+    }
+
     return true;
   });
 
   return (
     <div className="w-full flex flex-col min-h-screen">
       
-      {/* Header Area */}
-      <div className="px-6 md:px-10 py-8 border-b border-white/5 sticky top-0 z-10 bg-obsidian/80 backdrop-blur-md">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-6">
-          <h1 className="text-3xl font-grotesk font-bold uppercase tracking-tight">Explore Assets</h1>
+      {/* Premium Header Area */}
+      <div className="px-6 md:px-10 py-10 border-b border-white/5 sticky top-0 z-20 bg-obsidian/80 backdrop-blur-xl">
+        <div className="max-w-[1600px] mx-auto">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-8">
+            <div className="space-y-1">
+              <h1 className="text-4xl md:text-5xl font-grotesk font-bold uppercase tracking-tight text-white">
+                Explore <span className="text-lime">Assets</span>
+              </h1>
+              <p className="font-mono text-xs text-text-muted uppercase tracking-widest">
+                Discover sovereign digital artifacts secured by Midnight
+              </p>
+            </div>
+            
+            <div className="flex items-center gap-4">
+              <div className="relative w-full md:w-80 group">
+                <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-text-muted group-focus-within:text-lime transition-colors" />
+                <Input
+                  placeholder="Search by name or creator..."
+                  className="pl-12 h-12 bg-black/40 border-white/10 rounded-2xl focus:border-lime/50 transition-all text-sm font-mono"
+                  value={searchQuery}
+                  onChange={handleSearchChange}
+                />
+              </div>
+              <Button 
+                variant="secondary" 
+                className="h-12 px-6 shrink-0 gap-2 border-white/10 hover:border-lime/50 hover:bg-lime/5 group transition-all"
+                onClick={async (e) => {
+                  const btn = e.currentTarget;
+                  btn.disabled = true;
+                  const tid = toast.loading("Synchronizing registry with Midnight...");
+                  try {
+                    const res = await fetch('/api/contract/sync', { 
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ walletAddress })
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                      toast.success(data.message, { id: tid });
+                      router.refresh();
+                    } else {
+                      toast.error(data.message, { id: tid });
+                    }
+                  } catch (err) {
+                    toast.error("Sync failed", { id: tid });
+                  } finally {
+                    btn.disabled = false;
+                  }
+                }}
+              >
+                <RefreshCw className="w-4 h-4 text-lime group-hover:rotate-180 transition-transform duration-500" />
+                <span className="hidden sm:inline font-mono text-[10px] uppercase tracking-widest font-bold">Sync Registry</span>
+              </Button>
+            </div>
+          </div>
           
-          <Button 
-            variant="secondary" 
-            className="shrink-0 gap-2 border-white/10 hover:bg-white/5 hover:border-lime/50 transition-all font-mono text-[10px]"
-            onClick={async (e) => {
-              const btn = e.currentTarget;
-              btn.disabled = true;
-              const tid = toast.loading("Syncing with Midnight Registry...");
-              try {
-                const res = await fetch('/api/contract/sync', { 
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ walletAddress })
-                });
-                const data = await res.json();
-                if (data.success) {
-                  toast.success(data.message, { id: tid });
-                  router.refresh();
-                } else {
-                  toast.error(data.message, { id: tid });
-                }
-              } catch (err) {
-                toast.error("Sync failed", { id: tid });
-              } finally {
-                btn.disabled = false;
-              }
-            }}
-          >
-            <RefreshCw className="w-3 h-3 text-lime" />
-            Sync Registry
-          </Button>
-        </div>
-        
-        <div className="flex flex-col sm:flex-row gap-4 justify-between">
-           <div className="flex-1 w-full flex items-center gap-4 overflow-x-auto no-scrollbar">
-             {categories.map((cat) => (
-               <button
-                 key={cat}
-                 onClick={() => setSelectedCategory(cat)}
-                 className={`whitespace-nowrap px-4 py-2 rounded-full font-mono text-xs uppercase tracking-wider transition-colors ${selectedCategory === cat ? 'bg-white/10 text-text-primary' : 'bg-transparent text-text-secondary hover:text-text-primary hover:bg-white/5'}`}
-               >
-                 {cat}
-               </button>
-             ))}
-           </div>
-
-           <div className="flex items-center gap-4 shrink-0">
-             <div className="relative w-64 hidden md:block">
-               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-               <Input
-                 placeholder="Search assets..."
-                 className="pl-10 h-10 bg-obsidian border-white/10 rounded-xl"
-                 value={searchQuery}
-                 onChange={handleSearchChange}
-               />
-             </div>
-             <Button variant="secondary" className="h-10 px-4 text-xs font-mono uppercase gap-2 bg-obsidian border-white/10">
-               Sort: Trending <ChevronDown className="w-3 h-3" />
-             </Button>
-           </div>
+          <div className="flex items-center gap-3 overflow-x-auto no-scrollbar pb-1">
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className={`whitespace-nowrap px-6 py-2.5 rounded-xl font-mono text-[10px] font-bold uppercase tracking-widest transition-all border ${
+                  selectedCategory === cat 
+                    ? 'bg-lime text-obsidain border-lime shadow-[0_0_20px_rgba(204,255,0,0.2)]' 
+                    : 'bg-white/5 text-text-secondary border-white/5 hover:border-white/20 hover:text-white'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
-      <div className="flex flex-1">
+      <div className="flex flex-1 max-w-[1600px] mx-auto w-full">
         
-        {/* Left Sidebar Filters (Desktop) */}
-        <div className="hidden lg:block w-72 border-r border-white/5 p-6 overflow-y-auto space-y-8">
+        {/* Refined Sidebar Filters */}
+        <div className="hidden lg:block w-80 border-r border-white/5 p-8 sticky top-48 h-fit space-y-10">
            
            <div>
-             <h3 className="font-mono text-[10px] text-text-muted uppercase tracking-widest mb-4">Status</h3>
-             <div className="space-y-3 font-mono text-sm">
-               <label className="flex items-center gap-3 cursor-pointer group">
+             <div className="flex items-center justify-between mb-6">
+               <h3 className="font-mono text-[11px] font-bold text-white uppercase tracking-widest flex items-center gap-2">
+                 <Filter className="w-3 h-3 text-lime" /> Status
+               </h3>
+               { (verifiedOnly || privateOnly) && (
+                 <button 
+                  onClick={() => { setVerifiedOnly(false); setPrivateOnly(false); }}
+                  className="text-[9px] font-mono uppercase text-lime hover:underline"
+                 >
+                  Clear
+                 </button>
+               )}
+             </div>
+             <div className="space-y-4 font-mono text-xs">
+               <label className="flex items-center justify-between cursor-pointer group">
+                 <span className="text-text-secondary group-hover:text-white transition-colors">Verified Only</span>
                  <input
                    type="checkbox"
                    checked={verifiedOnly}
-                   onChange={handleVerifiedChange}
-                   className="w-4 h-4 rounded border-white/20 bg-obsidian text-lime focus:ring-lime/50"
+                   onChange={(e) => setVerifiedOnly(e.target.checked)}
+                   className="w-4 h-4 rounded border-white/20 bg-black text-lime focus:ring-lime/50"
                  />
-                 <span className="group-hover:text-lime transition-colors">Verified Only</span>
                </label>
-               <label className="flex items-center gap-3 cursor-pointer group">
+               <label className="flex items-center justify-between cursor-pointer group">
+                 <span className="text-text-secondary group-hover:text-white transition-colors">Privacy Enabled</span>
                  <input
                    type="checkbox"
                    checked={privateOnly}
-                   onChange={handlePrivateChange}
-                   className="w-4 h-4 rounded border-white/20 bg-obsidian text-lime focus:ring-lime/50"
+                   onChange={(e) => setPrivateOnly(e.target.checked)}
+                   className="w-4 h-4 rounded border-white/20 bg-black text-lime focus:ring-lime/50"
                  />
-                 <span className="group-hover:text-lime transition-colors">Privacy Enabled</span>
                </label>
              </div>
            </div>
 
-           <div className="pt-6 border-t border-white/5">
-             <h3 className="font-mono text-[10px] text-text-muted uppercase tracking-widest mb-4">Price Range</h3>
-             <div className="flex items-center gap-2">
-               <Input placeholder="Min" className="h-10 bg-obsidian border-white/10 rounded-lg text-center" />
-               <span className="text-text-muted">to</span>
-               <Input placeholder="Max" className="h-10 bg-obsidian border-white/10 rounded-lg text-center" />
+           <div className="pt-8 border-t border-white/5">
+             <h3 className="font-mono text-[11px] font-bold text-white uppercase tracking-widest mb-6">Price Range (ZERA)</h3>
+             <div className="space-y-4">
+               <div className="flex items-center gap-3">
+                 <Input 
+                   placeholder="Min" 
+                   value={priceRange.min}
+                   onChange={(e) => setPriceRange(prev => ({ ...prev, min: e.target.value }))}
+                   className="h-11 bg-black/60 border-white/10 rounded-xl text-center font-mono text-sm" 
+                 />
+                 <span className="text-text-muted font-mono text-xs">TO</span>
+                 <Input 
+                   placeholder="Max" 
+                   value={priceRange.max}
+                   onChange={(e) => setPriceRange(prev => ({ ...prev, max: e.target.value }))}
+                   className="h-11 bg-black/60 border-white/10 rounded-xl text-center font-mono text-sm" 
+                 />
+               </div>
+               <Button 
+                variant="secondary" 
+                className="w-full h-11 border-white/10 text-[10px] font-mono font-bold uppercase tracking-widest hover:border-lime/30"
+               >
+                Refine Search
+               </Button>
              </div>
-             <Button variant="secondary" className="w-full mt-4 h-10 border-white/10 text-xs font-mono">Apply</Button>
            </div>
 
+           <div className="pt-8 border-t border-white/5">
+              <h3 className="font-mono text-[11px] font-bold text-white uppercase tracking-widest mb-6">Sort By</h3>
+              <select className="w-full bg-black/60 border border-white/10 rounded-xl h-11 px-4 font-mono text-xs text-text-secondary focus:outline-none focus:border-lime/50 appearance-none cursor-pointer">
+                <option>Newest First</option>
+                <option>Price: Low to High</option>
+                <option>Price: High to Low</option>
+                <option>Most Popular</option>
+              </select>
+           </div>
         </div>
 
         {/* Main Grid */}
