@@ -12,19 +12,19 @@ export async function POST() {
 
     for (const asset of onChainAssets) {
       const existing = await prisma.asset.findUnique({ where: { id: asset.id } });
-      if (!existing) {
-        // Ensure creator/owner exists as a user
-        await prisma.user.upsert({
-          where: { address: asset.creatorPublicKeyHex },
-          update: {},
-          create: {
-            address: asset.creatorPublicKeyHex,
-            username: `user_${asset.creatorPublicKeyHex.slice(0, 8)}`,
-          },
-        });
+      
+      // Ensure creator/owner exists as a user
+      await prisma.user.upsert({
+        where: { address: asset.creatorPublicKeyHex },
+        update: {},
+        create: {
+          address: asset.creatorPublicKeyHex,
+          username: `user_${asset.creatorPublicKeyHex.slice(0, 8)}`,
+        },
+      });
 
-        // Since we can't reverse the sha256 metadataHash to get the IPFS CID, 
-        // we use a placeholder until the user updates it, OR if it's found in off-chain DB it wouldn't hit this.
+      if (!existing) {
+        // Create new asset record
         await prisma.asset.create({
           data: {
             id: asset.id,
@@ -44,8 +44,21 @@ export async function POST() {
           },
         });
         syncedCount++;
+      } else if (existing.contractAddress !== currentAddress) {
+        // Update existing asset to point to the new contract instance
+        await prisma.asset.update({
+          where: { id: asset.id },
+          data: {
+            contractAddress: currentAddress,
+            contractAssetId: asset.id,
+            owner: asset.creatorPublicKeyHex, // Reset owner to creator on new contract if no commitment found yet
+            verified: true,
+          }
+        });
+        syncedCount++;
       }
     }
+
 
     return NextResponse.json({
       success: true,
