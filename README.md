@@ -192,6 +192,7 @@ Because ZERA operates at the intersection of privacy, compliance, and provable o
   Allows hedge funds and financial institutions to clear digital assets securely without exposing their strategies.
 
 </details>
+<img width="1672" height="941" alt="ChatGPT Image Apr 27, 2026, 03_59_34 AM" src="https://github.com/user-attachments/assets/792cd7e5-821d-4b55-a93c-714ad9045a86" />
 
 ---
 
@@ -428,5 +429,6 @@ docker compose ps
 ---
 
 <p align="center">
-  Built during Hilo Hack
+  <img width="3232" height="1285" alt="footer" src="https://github.com/user-attachments/assets/58ef32ce-8d68-4990-9f15-914ee388717a" />
+
 </p>
