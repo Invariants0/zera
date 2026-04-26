@@ -81,9 +81,10 @@ export default function AssetDetail({ params }: { params: Promise<{ id: string }
         const watchlistResponse = await fetch(`/api/watchlist?userId=${encodeURIComponent(walletAddress)}`);
         if (watchlistResponse.ok) {
           const watchlistData = await watchlistResponse.json();
-          const isWatchlisted = watchlistData.some((w: any) => w.assetId === id);
+          const isWatchlisted = watchlistData.some((w: any) => w.id === id);
           setWatchlisted(isWatchlisted);
         }
+
       }
     } catch (error) {
       console.error('Failed to load asset:', error);
