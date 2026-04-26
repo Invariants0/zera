@@ -220,7 +220,8 @@ export async function verifyOwnershipById(id: string, ownerAddress: string) {
     success: true,
     message: 'Ownership checked',
     data: {
-      verified: (chainOwnership.data as any)?.verified ?? false,
+      verified: (chainOwnership as any).verified ?? false,
+      ownershipExists: (chainOwnership as any).ownershipExists ?? false,
       proof: `ownership-proof-${id}-${Date.now()}`,
       contract: chainOwnership,
     },

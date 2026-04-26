@@ -410,6 +410,44 @@ export async function registerAsset(input: RegisterAssetInput): Promise<Register
  * succeeds.  The `newOwner` param is preserved for backward compatibility but
  * is now ignored (a deprecation warning is logged).
  */
+export async function claimAsset(input: { assetId: string, claimantAddress: string }): Promise<ContractOpResult> {
+  const assetId = toAssetId(input.assetId);
+  
+  // 1. Check if ownership exists on-chain
+  const { runtime, providers, contractAddress } = await getContext();
+  const { ledger: ledgerState } = await getLedgerState(contractAddress, providers, runtime);
+  
+  const hasOwnership = ledgerState.ownershipCommitments.member(assetId);
+  
+  if (!hasOwnership) {
+    // Case A: Unowned on-chain. Assign it.
+    return await assignOwnership({ assetId: input.assetId });
+  }
+
+  // 2. Check if already the claimant using the REAL ZK verification logic
+  const verification = await verifyOwnership({
+    assetId: input.assetId,
+    claimedOwner: input.claimantAddress
+  });
+
+  if (verification.verified) {
+    return {
+      success: true,
+      message: 'You are already the on-chain owner of this asset',
+      contractAddress,
+      data: { assetId: input.assetId }
+    };
+  }
+
+  // 3. If it's NOT the claimant but it IS the server, we can transfer it.
+  // transferOwnership uses the server's witness 'contract-api'
+  return await transferOwnership({
+    assetId: input.assetId,
+    from: 'system',
+    to: input.claimantAddress
+  });
+}
+
 export async function assignOwnership(input: AssignOwnershipInput): Promise<ContractOpResult> {
   const assetId = toAssetId(input.assetId);
 
