@@ -193,17 +193,35 @@ export default function AssetDetail({ params }: { params: Promise<{ id: string }
 
 
   const handlePurchase = async () => {
+    // Enhanced validation with better error messages
     if (!isConnected || !walletAddress) {
-      toast.error('Connect your wallet first');
+      toast.error('Please connect your Lace wallet first');
+      console.error('[Purchase] Wallet not connected:', { isConnected, walletAddress });
       return;
     }
 
     if (!walletApi) {
-      toast.error('Wallet is not ready yet');
+      toast.error('Wallet API not ready. Try disconnecting and reconnecting your wallet.');
+      console.error('[Purchase] Wallet API not available. Check network configuration.');
+      console.error('[Purchase] Expected network: preprod, Current walletApi:', walletApi);
       return;
     }
 
-    if (!asset) return;
+    if (!asset) {
+      console.error('[Purchase] Asset not loaded');
+      return;
+    }
+
+    // Log purchase attempt for debugging
+    console.log('[Purchase] Starting purchase flow:', {
+      assetId: asset.id,
+      assetTitle: asset.title,
+      price: asset.price,
+      seller: asset.owner,
+      buyer: walletAddress,
+      isConnected,
+      hasWalletApi: !!walletApi,
+    });
 
     setIsPurchasing(true);
     const tid = toast.loading('Initiating Lace payment...');
@@ -228,20 +246,29 @@ export default function AssetDetail({ params }: { params: Promise<{ id: string }
 
       // Only perform transfer if price > 0
       if (priceBaseUnits > 0n) {
-        toast.loading('Please approve the transfer in Lace...', { id: tid });
+        toast.loading('Please approve the transfer in Lace wallet popup...', { id: tid });
         
-        const transferResult = await (walletApi as any).makeTransfer({
-          shieldedReceivers: [
-            {
-              address: asset.owner,
-              amount: priceBaseUnits,
-            }
-          ],
-          unshieldedReceivers: [],
-        });
+        try {
+          const transferResult = await (walletApi as any).makeTransfer({
+            shieldedReceivers: [
+              {
+                address: asset.owner,
+                amount: priceBaseUnits,
+              }
+            ],
+            unshieldedReceivers: [],
+          });
 
-        console.log('[Lace Payment] Transfer successful:', transferResult);
-        toast.loading('Payment confirmed. Updating registry...', { id: tid });
+          console.log('[Lace Payment] Transfer successful:', transferResult);
+          toast.loading('Payment confirmed. Updating registry...', { id: tid });
+        } catch (transferError) {
+          console.error('[Lace Payment] Transfer failed:', transferError);
+          throw new Error(
+            transferError instanceof Error 
+              ? `Payment failed: ${transferError.message}` 
+              : 'Payment was cancelled or failed'
+          );
+        }
       } else {
         toast.loading('Processing free asset...', { id: tid });
       }
