@@ -15,65 +15,84 @@
 
 ## System Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         USER LAYER                              │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐     │
-│  │ Lace Wallet  │───▶│  Web Frontend│───▶│  IPFS Upload │     │
-│  │  (tNight)    │    │   (Next.js)  │    │   (Pinata)   │     │
-│  └──────────────┘    └──────────────┘    └──────────────┘     │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                      BACKEND LAYER (Next.js API)                │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐     │
-│  │ Asset Service│───▶│Contract Svc  │───▶│ IPFS Service │     │
-│  │  (Postgres)  │    │ (Midnight)   │    │   (Rust)     │     │
-│  └──────────────┘    └──────────────┘    └──────────────┘     │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    BLOCKCHAIN LAYER (Midnight)                  │
-│  ┌──────────────────────────────────────────────────────────┐  │
-│  │  Compact Smart Contract (main.compact)                   │  │
-│  │  • registerAsset()      • verifyAsset()                  │  │
-│  │  • assignOwnership()    • transferOwnership()            │  │
-│  │  • verifyOwnership()    • getAsset()                     │  │
-│  └──────────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    subgraph "User Layer (Next.js & Lace)"
+        A[Web Frontend] -->|Connects| B[Lace Wallet]
+        A -->|POST /api/assets| C[Backend API]
+        A -->|GET /api/verify| C
+    end
+
+    subgraph "Backend Layer (TypeScript/Node.js)"
+        C -->|Orchestrates| D[Asset Service]
+        D -->|ZK Transactions| E[Asset Registry Service]
+        D -->|Persists Metadata| F[(PostgreSQL / Prisma)]
+        E -->|Wallet/Private State| F
+        D -->|File Handling| G[Storage Client]
+    end
+
+    subgraph "Storage Layer (Rust/Axum)"
+        G -->|HTTP/REST| H[Storage Service]
+        H -->|Pins Assets| I[IPFS / Pinata]
+    end
+
+    subgraph "Blockchain Layer (Midnight Network)"
+        E -->|Submit TX/Proof| J[Compact Smart Contract]
+        J -->|Ledger State| K[Asset Registry Map]
+        J -->|ZK Commitments| L[Ownership Map]
+        
+        subgraph "ZK Circuits"
+            M[registerAsset]
+            N[transferOwnership]
+            O[verifyOwnership]
+        end
+    end
+
+    %% Data flows
+    J -.->|Validates| M
+    J -.->|Updates| L
+    E -.->|Generates Proofs| M
 ```
 
 ---
 
 ## Component Breakdown
 
-### 1. Smart Contracts (`/contracts`)
+### 1. Smart Contract Architecture (`/contracts`)
 
 **Language**: Compact (Midnight's ZK-enabled smart contract language)  
 **File**: `contracts/src/main.compact`
 
+The core of ZERA's privacy and authenticity guarantees lies in its smart contract architecture. Rather than storing plaintext ownership records, the contract relies on cryptographic **commitments** and **zero-knowledge proofs**.
+
 #### Ledger State
-- `assetCount`: Counter for total registered assets
-- `assets`: Map of asset data (creator, hashes, timestamp)
-- `commitments`: Map preventing duplicate asset registration
-- `ownershipCommitments`: Map tracking ownership via ZK commitments
+The contract maintains a strictly minimized public ledger:
+- `assetCount`: Counter for total registered assets.
+- `assets`: Map of basic public asset data (creator public key, metadata hashes, timestamps).
+- `commitments`: Map preventing duplicate asset registration based on asset hashes.
+- `ownershipCommitments`: Map tracking ownership via ZK commitments instead of plaintext public keys.
 
 #### Circuits (On-Chain Functions)
-- **registerAsset**(assetHash, metadataHash, timestamp) → Registers new asset with creator proof
-- **verifyAsset**(assetHash, creatorPublicKey) → Verifies asset authenticity
-- **assetExists**(id) → Checks if asset exists on-chain
-- **getAsset**(id) → Retrieves asset data from ledger
-- **assignOwnership**(assetId) → Assigns ownership to caller (initializes ownership record)
-- **transferOwnership**(assetId, newOwnerPublicKey) → Transfers ownership with ZK proof
-- **verifyOwnership**(assetId, publicKey) → Verifies ownership via commitment
+Functions in Compact act as **Zero-Knowledge Circuits**. They verify off-chain generated proofs without exposing private inputs.
+- **registerAsset**(assetHash, metadataHash, timestamp) → Registers a new asset while proving the creator's identity secretly.
+- **verifyAsset**(assetHash, creatorPublicKey) → Reads the public ledger to verify authenticity.
+- **assetExists**(id) → Checks if an asset exists on-chain.
+- **getAsset**(id) → Retrieves public asset metadata from the ledger.
+- **assignOwnership**(assetId) → Initializes an ownership commitment for a newly minted asset.
+- **transferOwnership**(assetId, newOwnerPublicKey) → The core of ZERA's private trading. It requires a proof of knowledge of the *current* owner's secret key to securely update the commitment to the *new* owner's public key.
+- **verifyOwnership**(assetId, publicKey) → Mathematically verifies that a given public key corresponds to the hidden ownership commitment without exposing the wallet.
 
-**Note on Ownership Flow**: After registration, `assignOwnership()` initializes the ownership record, then `transferOwnership()` is called to normalize the ownership state. This ensures consistency with all future transfers, which always use the transfer circuit. This pattern avoids special-casing "first owner" logic in the contract.
+#### Architectural Flow: Ownership & Privacy
+1. When an asset is minted, an **Ownership Commitment** is generated by hashing a domain separator and the owner's public key.
+2. This commitment is written to the `ownershipCommitments` map on the ledger.
+3. During a transfer, the current owner provides their `ownerSecretKey` as a **witness** (private input). The circuit generates a ZK proof that the secret key matches the stored commitment.
+4. If valid, the circuit deletes the old commitment and generates a new one using the buyer's public key.
+5. The public state only shows that a commitment changed; it does not reveal the identities of the buyer or seller.
 
 #### Witnesses (Private Inputs)
-- `creatorSecretKey()`: 32-byte secret for asset creation
-- `ownerSecretKey()`: 32-byte secret for ownership operations
+Witnesses execute strictly on the client/backend side during proof generation. They are never sent to the blockchain.
+- `creatorSecretKey()`: 32-byte secret for proving asset creation.
+- `ownerSecretKey()`: 32-byte secret for proving ownership and authorizing transfers.
 
 **Key Files**:
 - `contracts/src/main.compact` - Smart contract source
