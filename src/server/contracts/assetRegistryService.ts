@@ -144,7 +144,7 @@ async function loadMidnightRuntime(): Promise<MidnightRuntime> {
       import('../../wallet'),
       import('../../providers'),
       import('../../witness'),
-      import('../../../contracts/index'),
+      import('contracts/index'),
     ]);
 
     runtimeCache = {
@@ -187,7 +187,7 @@ function extractTxId(txResult: unknown): string | undefined {
   return result?.public?.txId;
 }
 
-async function readDeploymentAddress(): Promise<string> {
+export async function readDeploymentAddress(): Promise<string> {
   if (cachedContractAddress) {
     return cachedContractAddress;
   }
@@ -217,10 +217,13 @@ async function getBackendWallet(): Promise<any> {
   const runtime = await loadMidnightRuntime();
   const config = runtime.getConfig();
 
+  const localOnly = process.env['ZERA_LOCAL_ONLY'];
+  const isLocalOnly = localOnly === 'true' || localOnly === 'local';
+
   // Dev-only safety check — set ZERA_LOCAL_ONLY=true to hard-block non-local usage.
-  if (process.env['ZERA_LOCAL_ONLY'] === 'true' && config.networkId !== 'undeployed') {
+  if (isLocalOnly && config.networkId !== 'undeployed') {
     throw new Error(
-      `ZERA_LOCAL_ONLY is set but networkId is "${config.networkId}". ` +
+      `ZERA_LOCAL_ONLY is set to "${localOnly}" but networkId is "${config.networkId}". ` +
       'Unset ZERA_LOCAL_ONLY to enable preprod/mainnet usage.',
     );
   }
@@ -254,9 +257,10 @@ function getCompiledContract(runtime: MidnightRuntime) {
 }
 
 async function getLedgerState(contractAddress: string, providers: any, runtime: MidnightRuntime) {
+  console.log(`[DEBUG] Querying indexer for contract: ${contractAddress}`);
   const state = await providers.publicDataProvider.queryContractState(contractAddress);
   if (!state) {
-    throw new Error('Unable to query contract state — indexer returned null');
+    throw new Error(`Unable to query contract state for ${contractAddress} — indexer returned null. (Did you restart the node and forget to redeploy?)`);
   }
   return runtime.ledger(state.data);
 }
@@ -293,8 +297,11 @@ async function getContext() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function registerAsset(input: RegisterAssetInput): Promise<RegisterAssetResult> {
-  const { runtime, providers, contractAddress } = await getContext();
+  const { runtime, providers, config, contractAddress } = await getContext();
   const compiledContract = getCompiledContract(runtime);
+
+  console.log('[DEBUG registerAsset] using config:', config);
+  console.log('[DEBUG registerAsset] using contractAddress:', contractAddress);
 
   const assetHash = toHashBytes(input.assetId);
   const metadataHash = toHashBytes(input.metadataUri);
@@ -543,7 +550,7 @@ export async function getAsset(assetIdParam: string): Promise<ContractOpResult> 
 export async function listAllOnChainAssets(): Promise<any[]> {
   const { runtime, providers, contractAddress } = await getContext();
   const ledgerState = await getLedgerState(contractAddress, providers, runtime);
-  
+
   const results = [];
   for (const [id, asset] of ledgerState.assets) {
     results.push({
@@ -564,11 +571,11 @@ export async function getOnChainOwnerOf(assetIdParam: string): Promise<string | 
   const assetId = toAssetId(assetIdParam);
   const { runtime, providers, contractAddress } = await getContext();
   const ledgerState = await getLedgerState(contractAddress, providers, runtime);
-  
+
   if (!ledgerState.ownershipCommitments.member(assetId)) {
     return null;
   }
-  
+
   const commitment = ledgerState.ownershipCommitments.lookup(assetId);
   return toHex(commitment);
 }

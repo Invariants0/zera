@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import {
   registerAsset,
   transferOwnership,
@@ -5,6 +6,7 @@ import {
   verifyOwnership,
   assetExists,
   getAsset,
+  readDeploymentAddress,
 } from '../contracts/assetRegistryService';
 import { prisma } from '@/lib/prisma';
 import type { Asset } from '@prisma/client';
@@ -30,6 +32,8 @@ type ListAssetFilters = {
 function toClientAsset(asset: Asset) {
   return {
     id: asset.id,
+    ipfsCid: asset.ipfsCid,
+    metadataHash: asset.metadataHash,
     title: asset.title ?? asset.id,
     description: asset.description ?? undefined,
     creator: asset.creator,
@@ -64,6 +68,9 @@ export async function createAsset(input: CreateAssetInput) {
       owner: input.creator,
       isPrivate: input.isPrivate,
       verified: true,
+      ipfsCid: input.metadataUri, // The metadataUri passed in is the CID
+      metadataHash: createHash('sha256').update(input.metadataUri).digest('hex'),
+      contractAddress: await readDeploymentAddress(),
       title: input.title,
       description: input.description,
       imageUrl: input.imageUrl,
@@ -81,6 +88,7 @@ export async function createAsset(input: CreateAssetInput) {
       from: 'mint',
       to: input.creator,
       txHash: onChain.transactionHash,
+      contractAddress: await readDeploymentAddress(),
     },
   });
 
@@ -95,7 +103,10 @@ export async function createAsset(input: CreateAssetInput) {
 }
 
 export async function listAssets(filters?: ListAssetFilters) {
-  const where: Record<string, unknown> = {};
+  const currentAddress = await readDeploymentAddress();
+  const where: Record<string, any> = {
+    contractAddress: currentAddress,
+  };
 
   if (typeof filters?.verified === 'boolean') where['verified'] = filters.verified;
   if (typeof filters?.private === 'boolean') where['isPrivate'] = filters.private;
@@ -123,8 +134,12 @@ export async function getAssetById(id: string) {
 }
 
 export async function getAssetsByOwner(ownerAddress: string) {
+  const currentAddress = await readDeploymentAddress();
   const assets = await prisma.asset.findMany({
-    where: { owner: ownerAddress },
+    where: { 
+      owner: ownerAddress,
+      contractAddress: currentAddress,
+    },
     orderBy: { createdAt: 'desc' },
   });
   return assets.map(toClientAsset);
@@ -166,6 +181,7 @@ export async function transferAsset(id: string, to: string, from: string, price?
       to,
       price,
       txHash: (tx as any)?.transactionHash,
+      contractAddress: await readDeploymentAddress(),
     },
   });
 
@@ -200,4 +216,24 @@ export async function syncAssetFromContract(id: string) {
   if (!exists.data?.exists) return null;
   const chainAsset = await getAsset(asset.contractAssetId);
   return chainAsset.data;
+}
+export async function deleteAsset(id: string) {
+  const asset = await prisma.asset.findUnique({ where: { id } });
+  if (!asset) return { success: false, message: 'Asset not found' };
+
+  await prisma.activity.create({
+    data: {
+      id: `act-${Date.now()}`,
+      type: 'BURN',
+      assetId: id,
+      assetTitle: asset.title ?? id,
+      from: asset.owner,
+      to: 'deleted',
+    },
+  });
+
+  await prisma.asset.delete({ where: { id } });
+
+
+  return { success: true, message: 'Asset removed from local database' };
 }
