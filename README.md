@@ -429,6 +429,5 @@ docker compose ps
 ---
 
 <p align="center">
-  <img width="3232" height="1285" alt="footer" src="https://github.com/user-attachments/assets/58ef32ce-8d68-4990-9f15-914ee388717a" />
-
+  <img width="1200" height="277" alt="foooooterrrrr" src="https://github.com/user-attachments/assets/38f185c1-8203-429e-8348-745db0a9291d" />
 </p>
