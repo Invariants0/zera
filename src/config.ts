@@ -1,7 +1,5 @@
 import { setNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
 
-setNetworkId('preprod');
-
 export type NetworkConfig = {
   networkId: string;
   indexer: string;
@@ -33,10 +31,22 @@ export const PREPROD_CONFIG: NetworkConfig = {
 };
 
 export function getConfig(): NetworkConfig {
-  const network = process.env['MIDNIGHT_NETWORK'] ?? 'local';
+  let network = process.env['MIDNIGHT_NETWORK'];
+
+  // Check if we should force local mode
+  const localOnly = process.env['ZERA_LOCAL_ONLY']?.replace(/['"]/g, '').trim();
+  if (localOnly === 'true' || localOnly === 'local') {
+    network = 'local';
+  }
+
+  // Final fallback
+  network = network?.replace(/['"]/g, '').trim() ?? 'local';
+
   if (network === 'local') {
+    setNetworkId('undeployed');
     return LOCAL_CONFIG;
   } else if (network === 'preprod') {
+    setNetworkId('preprod');
     return PREPROD_CONFIG;
   } else {
     throw new Error(

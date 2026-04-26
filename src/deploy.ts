@@ -1,3 +1,5 @@
+import * as dotenv from 'dotenv';
+dotenv.config({ path: '.env.local' });
 import { WebSocket } from 'ws';
 import { setNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
 import {
@@ -137,29 +139,26 @@ async function waitForDustAvailable(walletFacade: any, logger: any, timeout = 12
   logger.info('Checking wallet readiness (DUST generated on-demand)...');
   logger.info(`Waiting up to ${timeout / 1000}s for DUST generation...`);
 
-  // DUST is generated on-demand and required for transaction fees.
-  // Always honor timeout even if wallet state is temporarily unavailable.
   return new Promise((resolve) => {
     const startTime = Date.now();
-    const checkInterval = setInterval(() => {
-      if (Date.now() - startTime > timeout) {
-        clearInterval(checkInterval);
-        logger.warn(`DUST generation timeout after ${timeout / 1000}s - proceeding anyway, may fail if insufficient for fees`);
+    const subscription = walletFacade.state().subscribe({
+      next: (state: any) => {
+        if (state.dust?.availableCoins?.length > 0) {
+          logger.info(`DUST is available for deployment: ${state.dust.balance(new Date())}`);
+          subscription.unsubscribe();
+          resolve(undefined);
+        } else if (Date.now() - startTime > timeout) {
+          logger.warn(`DUST generation timeout after ${timeout / 1000}s - proceeding anyway`);
+          subscription.unsubscribe();
+          resolve(undefined);
+        }
+      },
+      error: (err: any) => {
+        logger.error(`Error checking DUST status: ${err}`);
+        subscription.unsubscribe();
         resolve(undefined);
-        return;
       }
-
-      const state = walletFacade.getState?.();
-      if (!state) {
-        return;
-      }
-
-      if (state.dust?.availableCoins?.length > 0) {
-        clearInterval(checkInterval);
-        logger.info(`DUST is available for deployment: ${state.dust.balance(new Date())}`);
-        resolve(undefined);
-      }
-    }, 500);
+    });
   });
 }
 
