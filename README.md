@@ -294,25 +294,15 @@ Follow these steps to quickly set up and run ZERA locally.
 
 ## Documentation
 
-For deep dives into the ZERA platform, please refer to our dedicated documentation files located in the `docs/` folder:
+For a comprehensive deep dive into the ZERA platform, please explore our `docs/` directory:
 
-### 1. Core Architecture & Privacy
-- **[Protocol and Privacy Architecture](PROTOCOL_AND_PRIVACY.md)**
-  An exhaustive deep dive into ZERA's zero-knowledge cryptography, data models, off-chain indexing (Prisma), IPFS metadata schemas, and Zero-Knowledge KYC compliance mechanics.
-
-### 2. Smart Contracts & Security
-- **[Smart Contract Deep Dive](SMART_CONTRACT_DEEP_DIVE.md)**
-  Comprehensive API reference for `main.compact`, step-by-step logic of ZK circuits (`registerAsset`, `transferOwnership`), and the strict zero-trust threat models defending against double-spends and frontrunning.
-
-### 3. Application Stack (Frontend, API, Storage)
-- **[Frontend and API Architecture](FRONTEND_AND_API_ARCHITECTURE.md)**
-  Detailed documentation of the Next.js App Router, Zustand state management, Next.js REST API layer, the Rust/Axum IPFS proxy node, and the Obsidian & Lime design system rules.
-
-### 4. Operations & Infrastructure
-- **[Development and Deployment Guide](DEVELOPMENT_AND_DEPLOYMENT.md)**
-  Production deployment instructions for Vercel, AWS/Render (Rust node), and Midnight Mainnet, alongside strict branching strategies and contribution protocols.
-
-*(Note: `ARCHITECTURE.md`, `SETUP.md`, and `LOCAL_TESTING.md` remain as foundational entry points).*
+- **[Protocol & Privacy Architecture](docs/PROTOCOL_AND_PRIVACY.md)** — Zero-knowledge cryptography, privacy models, and KYC mechanisms.
+- **[Smart Contract Deep Dive](docs/SMART_CONTRACT_DEEP_DIVE.md)** — Compact API reference, ZK circuit execution flows, and threat models.
+- **[Frontend & API Architecture](docs/FRONTEND_AND_API_ARCHITECTURE.md)** — Next.js routing, Zustand state, Rust IPFS proxy node, and Design System rules.
+- **[Development & Deployment Guide](docs/DEVELOPMENT_AND_DEPLOYMENT.md)** — Production deployment instructions and contribution protocols.
+- **[System Architecture Diagram](docs/ARCHITECTURE.md)** — High-level technical diagrams and data flow.
+- **[Setup Guide](docs/SETUP.md)** — Complete installation instructions.
+- **[Local Testing Guide](docs/LOCAL_TESTING.md)** — Managing local test networks and running suites.
 
 ---
 
