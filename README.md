@@ -123,7 +123,6 @@ ZERA is a **verification-first, privacy-preserving** asset registry and marketpl
 3. *Step-by-step Verification* &nbsp;&rarr;&nbsp; ZK-proofs verify the integrity of the trade at every step of the transaction loop.
 
 </details>
-
 ---
 
 ## Product Flow
@@ -167,6 +166,8 @@ ZERA's architecture enforces a strict sequence of cryptographic operations to en
 3. *Confirm* &nbsp;&rarr;&nbsp; Full, trustless confirmation without revealing identity.
 
 </details>
+
+<img width="1536" height="881" alt="ChatGPT Image Apr 27, 2026, 03_14_52 AM (1)" src="https://github.com/user-attachments/assets/4335a04c-1ca5-4385-ba98-5b783ff4f5d8" />
 
 ---
 
