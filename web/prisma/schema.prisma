@@ -1,0 +1,144 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Asset {
+  id              String     @id
+  contractAssetId String?
+  metadataUri     String
+  creator         String
+  owner           String
+  isPrivate       Boolean    @default(false)
+  verified        Boolean    @default(false)
+  ipfsCid         String?
+  metadataHash    String?
+  title           String?
+  description     String?
+  imageUrl        String?
+  price           String?
+  badges          String[]
+  contractAddress String?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  listings   Listing[]
+  activities Activity[]
+  proofLogs  ProofLog[]
+  watchedBy  Watchlist[]
+}
+
+model Listing {
+  id        String        @id
+  assetId   String
+  asset     Asset         @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  seller    String
+  buyer     String?
+  price     String
+  status    ListingStatus @default(ACTIVE)
+  txHash    String?
+  contractAddress String?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+}
+
+enum ListingStatus {
+  ACTIVE
+  SOLD
+  CANCELLED
+}
+
+model Activity {
+  id         String       @id
+  type       ActivityType
+  assetId    String
+  asset      Asset        @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  assetTitle String
+  from       String
+  to         String
+  price      String?
+  txHash     String?
+  contractAddress String?
+  timestamp  DateTime     @default(now())
+}
+
+enum ActivityType {
+  MINT
+  TRANSFER
+  SALE
+  LIST
+  BURN
+}
+
+model ProofLog {
+  id        String      @id
+  kind      ProofKind
+  assetId   String?
+  asset     Asset?      @relation(fields: [assetId], references: [id])
+  wallet    String?
+  policy    String?
+  result    ProofResult
+  createdAt DateTime    @default(now())
+}
+
+enum ProofKind {
+  OWNERSHIP
+  ELIGIBILITY
+}
+
+enum ProofResult {
+  GENERATED
+  VERIFIED
+  FAILED
+}
+
+model User {
+  address   String      @id
+  username  String?     @unique
+  avatarUrl String?
+  bio       String?
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  watchlist Watchlist[]
+}
+
+model Watchlist {
+  id        String   @id @default(cuid())
+  userId    String
+  assetId   String
+  user      User     @relation(fields: [userId], references: [address])
+  asset     Asset    @relation(fields: [assetId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([userId, assetId])
+}
+
+model Purchase {
+  id        String   @id @default(cuid())
+  userId    String
+  assetId   String
+  price     String
+  txHash    String?
+  createdAt DateTime @default(now())
+
+  @@unique([userId, assetId])
+  @@index([userId])
+  @@index([assetId])
+}
+
+model WalletState {
+  id        String   @id // e.g. "backend-unshielded", "backend-shielded"
+  data      String   // Serialized state blob
+  updatedAt DateTime @updatedAt
+}
+
+model PrivateState {
+  id        String   @id
+  data      String   // Serialized JSON state
+  updatedAt DateTime @updatedAt
+}
+
+
