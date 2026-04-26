@@ -441,11 +441,22 @@ export async function claimAsset(input: { assetId: string, claimantAddress: stri
 
   // 3. If it's NOT the claimant but it IS the server, we can transfer it.
   // transferOwnership uses the server's witness 'contract-api'
-  return await transferOwnership({
-    assetId: input.assetId,
-    from: 'system',
-    to: input.claimantAddress
-  });
+  try {
+    return await transferOwnership({
+      assetId: input.assetId,
+      from: 'system',
+      to: input.claimantAddress
+    });
+  } catch (err: any) {
+    if (err.message?.includes('Caller is not the owner')) {
+      return {
+        success: false,
+        message: 'This asset is already owned by a sovereign user. Only the current owner can initiate a transfer.',
+        contractAddress
+      };
+    }
+    throw err;
+  }
 }
 
 export async function assignOwnership(input: AssignOwnershipInput): Promise<ContractOpResult> {
@@ -485,27 +496,34 @@ export async function transferOwnership(input: TransferOwnershipInput): Promise<
   const { runtime, providers, contractAddress } = await getContext();
   const compiledContract = getCompiledContract(runtime);
 
-  const txResult = await submitCallTx(providers, {
-    compiledContract,
-    contractAddress,
-    privateStateId: PRIVATE_STATE_ID,
-    circuitId: 'transferOwnership',
-    args: [assetId, newOwnerPublicKey],
-  } as any);
+  try {
+    const txResult = await submitCallTx(providers, {
+      compiledContract,
+      contractAddress,
+      privateStateId: PRIVATE_STATE_ID,
+      circuitId: 'transferOwnership',
+      args: [assetId, newOwnerPublicKey],
+    } as any);
 
-  return {
-    success: true,
-    transactionHash: extractTxId(txResult),
-    contractAddress,
-    message: 'Ownership transfer submitted',
-    data: {
-      assetId: input.assetId,
-      from: input.from,
-      to: input.to,
-      price: input.price,
-      newOwnerPublicKeyHex: toHex(newOwnerPublicKey),
-    },
-  };
+    return {
+      success: true,
+      transactionHash: extractTxId(txResult),
+      contractAddress,
+      message: 'Ownership transfer submitted',
+      data: {
+        assetId: input.assetId,
+        from: input.from,
+        to: input.to,
+        price: input.price,
+        newOwnerPublicKeyHex: toHex(newOwnerPublicKey),
+      },
+    };
+  } catch (err: any) {
+    if (err.message?.includes('Caller is not the owner')) {
+      throw new Error('Sovereignty Violation: The registry server (Alice) does not have permission to move this asset. Only the current ZK-owner can sign this transfer.');
+    }
+    throw err;
+  }
 }
 
 export async function verifyOwnership(input: VerifyOwnershipInput): Promise<VerifyOwnershipResult> {

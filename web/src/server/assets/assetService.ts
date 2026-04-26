@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import {
   registerAsset,
-  transferOwnership,
+  claimAsset,
   assignOwnership,
   verifyAssetAuthenticity,
   verifyOwnership,
@@ -63,14 +63,10 @@ export async function createAsset(input: CreateAssetInput) {
   // P2 FIX: Ensure ownership is assigned and transferred on-chain
   if (onChain.success && onChain.assetIndex) {
     try {
-      console.log(`[DEBUG] Assigning ownership for asset index ${onChain.assetIndex}`);
-      await assignOwnership({ assetId: onChain.assetIndex });
-      
-      console.log(`[DEBUG] Transferring ownership to ${input.creator}`);
-      await transferOwnership({ 
+      console.log(`[DEBUG] Ensuring on-chain ownership for ${input.creator}`);
+      await claimAsset({ 
         assetId: onChain.assetIndex, 
-        from: 'registry', // not used by circuit, but for logging
-        to: input.creator 
+        claimantAddress: input.creator 
       });
     } catch (err) {
       console.error('Failed to set on-chain ownership during minting:', err);
@@ -182,7 +178,12 @@ export async function transferAsset(id: string, to: string, from: string, price?
   if (!asset) return { success: false, message: 'Asset not found' };
   if (!asset.contractAssetId) return { success: false, message: 'Asset has no contract asset id' };
 
-  const tx = await transferOwnership({ assetId: asset.contractAssetId, from, to, price });
+  // Use claimAsset instead of transferOwnership to handle lazy assignment if needed
+  // this automatically handles Case A (unowned) and Case B (transfer from system)
+  const tx = await claimAsset({ 
+    assetId: asset.contractAssetId, 
+    claimantAddress: to 
+  });
 
   const updated = await prisma.asset.update({
     where: { id },
