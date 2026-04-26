@@ -1,8 +1,5 @@
-<div align="center">
-  <h1>🏛️ ZERA</h1>
+<h1>ZERA</h1>
   <p><strong>The Institutional-Grade Digital Asset Marketplace</strong></p>
-</div>
-
 <br />
 
 > NFTs are still seen as speculative toys, not serious assets.
