@@ -30,6 +30,7 @@ export async function getOwnershipProof(assetId: string, owner?: string) {
       type: 'ownership',
       generatedAt: proofLog.createdAt.toISOString(),
       verified: verification.data?.verified ?? false,
+      commitment: (verification.data as any)?.commitment || null,
     },
   };
 }

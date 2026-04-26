@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash as createNodeHash } from 'node:crypto';
 import { setNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
+import { createCircuitContext } from '@midnight-ntwrk/compact-runtime';
 import { submitCallTx } from '@midnight-ntwrk/midnight-js-contracts';
 import pino from 'pino';
 import { prisma } from '@/lib/prisma';
@@ -57,6 +58,11 @@ type ContractOpResult = {
   data?: Record<string, unknown>;
 };
 
+type VerifyOwnershipResult = ContractOpResult & {
+  verified: boolean;
+  ownershipExists: boolean;
+};
+
 const logger = pino({ level: process.env['LOG_LEVEL'] ?? 'info' });
 
 const __filename = fileURLToPath(import.meta.url);
@@ -78,6 +84,8 @@ type MidnightRuntime = {
   createTestWitnesses: (seed: string) => { getWitnesses: () => any };
   ledger: (value: any) => any;
   pureCircuits: Record<string, (...args: any[]) => any>;
+  impureCircuits: Record<string, (context: any, ...args: any[]) => any>;
+  Contract: any;
   zkConfigPath: string;
   createCompiledContractWithWitnesses: (witnessProvider: any) => any;
 };
@@ -159,11 +167,13 @@ async function loadMidnightRuntime(): Promise<MidnightRuntime> {
       createTestWitnesses: witnessMod.createTestWitnesses,
       ledger: contractsMod.ledger,
       pureCircuits: (contractsMod as any).pureCircuits ?? {},
+      impureCircuits: (contractsMod as any).Contract ?? {}, // The Contract object contains the impure circuits in Compact
+      Contract: contractsMod.Contract,
       zkConfigPath: contractsMod.zkConfigPath,
       createCompiledContractWithWitnesses: contractsMod.createCompiledContractWithWitnesses,
     };
 
-    return runtimeCache;
+    return runtimeCache!;
   } catch (error) {
     runtimeLoadError = error instanceof Error ? error : new Error(String(error));
     throw runtimeLoadError;
@@ -316,12 +326,7 @@ async function getLedgerState(contractAddress: string, providers: any, runtime: 
   }
   console.log(`[DEBUG] Raw contract state received from indexer.`);
   const ledger = runtime.ledger(state.data);
-  console.log(`[DEBUG] Parsed ledger state keys:`, Object.keys(ledger));
-  if (ledger.assets) {
-    console.log(`[DEBUG] Ledger assets type:`, typeof ledger.assets);
-    console.log(`[DEBUG] Ledger assets is Map:`, ledger.assets instanceof Map);
-  }
-  return ledger;
+  return { ledger, stateData: state.data };
 }
 
 async function getAssetCount(contractAddress: string, providers: any, runtime: MidnightRuntime) {
@@ -465,47 +470,63 @@ export async function transferOwnership(input: TransferOwnershipInput): Promise<
   };
 }
 
-export async function verifyOwnership(input: VerifyOwnershipInput): Promise<ContractOpResult> {
+export async function verifyOwnership(input: VerifyOwnershipInput): Promise<VerifyOwnershipResult> {
   const assetId = toAssetId(input.assetId);
   const ownerPublicKey = toHashBytes(input.claimedOwner.trim().toLowerCase());
 
   console.log(`[DEBUG verifyOwnership] assetId: ${assetId}, claimedOwner: ${input.claimedOwner}`);
   console.log(`[DEBUG verifyOwnership] ownerPublicKeyHex: ${toHex(ownerPublicKey)}`);
 
-  const { runtime, providers, contractAddress } = await getContext();
-  const ledgerState = await getLedgerState(contractAddress, providers, runtime);
+  const { runtime, providers, wallet, contractAddress } = await getContext();
+  const { ledger: ledgerState, stateData } = await getLedgerState(contractAddress, providers, runtime);
 
-  let verified: boolean | null = null;
+  let verified = false;
   let ownershipExists = false;
 
   try {
-    if (ledgerState.ownershipCommitments.member(assetId)) {
-      ownershipExists = true;
-      const storedCommitment = ledgerState.ownershipCommitments.lookup(assetId);
-      
-      // Note: Full ZK verification happens via the /api/proofs/ownership route.
-      // For this fast check, we look for the commitment in the ledger.
-      // If we had the exact persistentHash logic in JS, we could verify the owner here.
-      console.log(`[DEBUG verifyOwnership] Found commitment in ledger for asset ${assetId}`);
-      verified = true; // In this context, we'll return true if any commitment exists
-    } else {
-      verified = false;
-    }
+    // Get necessary data for circuit context
+    const coinPublicKey = wallet.getCoinPublicKey();
+    const privateState = await providers.privateStateProvider.get(PRIVATE_STATE_ID) ?? {};
+    
+    // Get witnesses and instantiate the contract
+    const witnessProvider = runtime.createTestWitnesses('contract-api');
+    const witnesses = witnessProvider.getWitnesses();
+    const contract = new runtime.Contract(witnesses);
+    
+    // Create a proper circuit context for impure circuit execution
+    const context = createCircuitContext(
+      contractAddress,
+      coinPublicKey,
+      stateData,
+      privateState
+    );
+
+    // Call the impure circuit on the contract instance
+    const result = await contract.impureCircuits.verifyOwnership(context, assetId, ownerPublicKey);
+
+    verified = result.result;
+
+    
+    // Check if any commitment exists for the asset to report exists/not
+    ownershipExists = ledgerState.ownershipCommitments.member(assetId);
+    
+    console.log(`[DEBUG verifyOwnership] ZK Circuit Result: ${verified}, Ownership Exists: ${ownershipExists}`);
   } catch (err) {
-    console.error(`[DEBUG verifyOwnership] Error accessing ledger:`, err);
+    console.error(`[DEBUG verifyOwnership] Error during ZK verification:`, err);
     verified = false;
   }
+
 
   return {
     success: true,
     contractAddress,
-    message: verified ? 'Ownership verified via ledger commitment' : 'Ownership could not be verified',
+    verified,
+    ownershipExists,
+    message: verified ? 'Ownership verified via real ZK proof' : 'Ownership could not be verified via ZK proof',
     data: {
       assetId: input.assetId,
       claimedOwner: input.claimedOwner,
-      claimedOwnerPublicKeyHex: toHex(ownerPublicKey),
-      verified,
-      ownershipExists,
+      commitment: ownershipExists ? toHex(ledgerState.ownershipCommitments.lookup(assetId)) : null,
     },
   };
 }
@@ -518,7 +539,7 @@ export async function verifyOwnership(input: VerifyOwnershipInput): Promise<Cont
 export async function verifyAssetAuthenticity(assetIdParam: string): Promise<ContractOpResult> {
   const assetId = toAssetId(assetIdParam);
   const { runtime, providers, contractAddress } = await getContext();
-  const ledgerState = await getLedgerState(contractAddress, providers, runtime);
+  const { ledger: ledgerState } = await getLedgerState(contractAddress, providers, runtime);
 
   if (!ledgerState.assets.member(assetId)) {
     return {
@@ -563,8 +584,9 @@ export async function verifyAssetAuthenticity(assetIdParam: string): Promise<Con
 export async function assetExists(assetIdParam: string): Promise<ContractOpResult> {
   const assetId = toAssetId(assetIdParam);
   const { runtime, providers, contractAddress } = await getContext();
-  const ledgerState = await getLedgerState(contractAddress, providers, runtime);
+  const { ledger: ledgerState } = await getLedgerState(contractAddress, providers, runtime);
   const exists = ledgerState.assets.member(assetId);
+
 
   return {
     success: true,
@@ -581,7 +603,7 @@ export async function assetExists(assetIdParam: string): Promise<ContractOpResul
 export async function getAsset(assetIdParam: string): Promise<ContractOpResult> {
   const assetId = toAssetId(assetIdParam);
   const { runtime, providers, contractAddress } = await getContext();
-  const ledgerState = await getLedgerState(contractAddress, providers, runtime);
+  const { ledger: ledgerState } = await getLedgerState(contractAddress, providers, runtime);
 
   if (!ledgerState.assets.member(assetId)) {
     return {
@@ -614,59 +636,58 @@ export async function getAsset(assetIdParam: string): Promise<ContractOpResult> 
  */
 export async function listAllOnChainAssets(): Promise<any[]> {
   const { runtime, providers, contractAddress } = await getContext();
-  const ledgerState = await getLedgerState(contractAddress, providers, runtime);
+  const { ledger } = await getLedgerState(contractAddress, providers, runtime);
 
-  const results = [];
-  const assets = ledgerState.assets;
+  const results: any[] = [];
+  const assets = ledger.assets;
+  const ownerships = ledger.ownershipCommitments;
   
   if (assets) {
-    // Advanced iteration to handle different Compact Map implementations
     let entries: Array<[any, any]> = [];
     
     try {
-      // Midnight SDK ledger maps implement the iterator protocol
       entries = Array.from(assets);
-      
-      // Fallback if iterator is empty but we have a data property
       if (entries.length === 0 && assets.data) {
         entries = Object.entries(assets.data);
       }
     } catch (e) {
-      console.warn(`[DEBUG] listAllOnChainAssets: Fallback to Object.entries due to error:`, e);
       entries = Object.entries(assets.data || assets);
     }
 
-
-    console.log(`[DEBUG] listAllOnChainAssets: raw entries count: ${entries.length}`);
-
     for (const [id, asset] of entries) {
-      // 1. Skip internal methods/properties
       if (typeof id === 'string' && ['isEmpty', 'size', 'member', 'lookup', 'entries', 'values', 'keys', 'forEach', 'data'].includes(id)) {
         continue;
       }
-      
       if (!asset) continue;
 
-      // 2. Identify actual asset data
+      const assetId = Number.parseInt(id.toString());
       const creatorPublicKey = (asset as any).creatorPublicKey || (asset as any).creator_public_key;
       const assetHash = (asset as any).assetHash || (asset as any).asset_hash;
       const metadataHash = (asset as any).metadataHash || (asset as any).metadata_hash;
       const timestamp = (asset as any).timestamp || (asset as any).time_stamp;
 
-      if (!creatorPublicKey || !assetHash) {
-        continue;
+      if (!creatorPublicKey || !assetHash) continue;
+
+      // Check if ownership is assigned
+      let ownerCommitmentHex = undefined;
+      try {
+        if (ownerships && ownerships.member(BigInt(assetId))) {
+          const commitment = ownerships.lookup(BigInt(assetId));
+          ownerCommitmentHex = toHex(commitment);
+        }
+      } catch (e) {
+        console.warn(`[DEBUG] listAllOnChainAssets: Failed to lookup ownership for ${assetId}:`, e);
       }
 
       results.push({
-        id: id.toString(),
+        id: assetId.toString(),
         creatorPublicKeyHex: toHex(creatorPublicKey),
+        ownerPublicKeyHex: ownerCommitmentHex || toHex(creatorPublicKey), // fallback to creator if not assigned
         assetHashHex: toHex(assetHash),
         metadataHashHex: toHex(metadataHash || ''),
         timestamp: (timestamp || 0).toString(),
       });
     }
-  } else {
-    console.warn(`[DEBUG] listAllOnChainAssets: ledgerState.assets is undefined`);
   }
   return results;
 }
@@ -677,7 +698,7 @@ export async function listAllOnChainAssets(): Promise<any[]> {
 export async function getOnChainOwnerOf(assetIdParam: string): Promise<string | null> {
   const assetId = toAssetId(assetIdParam);
   const { runtime, providers, contractAddress } = await getContext();
-  const ledgerState = await getLedgerState(contractAddress, providers, runtime);
+  const { ledger: ledgerState } = await getLedgerState(contractAddress, providers, runtime);
 
   if (!ledgerState.ownershipCommitments.member(assetId)) {
     return null;
