@@ -1,33 +1,6 @@
-<div align="center">
-  <h1>ZERA</h1>
-  <p><strong>The Institutional-Grade Digital Asset Marketplace</strong></p>
-</div>
+# ZERA
 
-<br />
-
-## 🌐 Vision
-
-> [!NOTE]  
-> **NFTs were supposed to redefine ownership. Instead, they became synonymous with speculation.**
-> 
-> Ownership can be faked. Assets can be duplicated. Identity is either exposed or completely absent. Compliance doesn’t exist.
-> So the market reacted accordingly: **NFTs are still seen as speculative toys, not serious assets.**
-
-**ZERA changes that.**  
-We are not building another marketplace. We are rebuilding the foundation of digital ownership.
-
-**ZERA transforms digital assets into:**
-- **Verified** — provably authentic  
-- **Private** — ownership without exposure  
-- **Compliant** — enforceable without revealing data  
-
-**This represents a fundamental paradigm shift from:**
-- ❌ Visibility → ✅ **Verifiability**  
-- ❌ Hype → ✅ **Legitimacy**  
-- ❌ Assumptions → ✅ **Cryptographic Proof**  
-
-Most marketplaces optimize for hype, visibility, and speculation.  
-**ZERA optimizes for legitimacy, trust, and enforceability.**
+An institutional-grade digital asset marketplace that turns digital assets into verified, private, and compliant financial primitives built for real ownership.
 
 <br />
 
@@ -38,15 +11,50 @@ Most marketplaces optimize for hype, visibility, and speculation.
 <br />
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Status-Active%20Development-0f172a?style=for-the-badge"/>
-  <img src="https://img.shields.io/badge/Privacy-ZK%20Powered-22c55e?style=for-the-badge"/>
-  <img src="https://img.shields.io/badge/Focus-Verified%20Assets-a3e635?style=for-the-badge"/>
-  <img src="https://img.shields.io/badge/Built%20On-Midnight%20Network-84cc16?style=for-the-badge"/>
+  <img src="https://img.shields.io/badge/Status-Active%20Development-0f172a?style=flat-square"/>
+  <img src="https://img.shields.io/badge/Privacy-ZK%20Powered-22c55e?style=flat-square"/>
+  <img src="https://img.shields.io/badge/Focus-Verified%20Assets-a3e635?style=flat-square"/>
+  <img src="https://img.shields.io/badge/Built%20On-Midnight%20Network-84cc16?style=flat-square"/>
 </p>
 
-<br />
+<p align="center">
+  <img src="https://img.shields.io/badge/Midnight_Network-000000?style=flat-square&logo=polkadot&logoColor=white" alt="Midnight Network" />
+  <img src="https://img.shields.io/badge/Next.js-000000?style=flat-square&logo=nextdotjs&logoColor=white" alt="Next.js" />
+  <img src="https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/Node.js-339933?style=flat-square&logo=nodedotjs&logoColor=white" alt="Node.js" />
+  <img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=flat-square&logo=tailwindcss&logoColor=white" alt="Tailwind CSS" />
+  <img src="https://img.shields.io/badge/Prisma-2D3748?style=flat-square&logo=prisma&logoColor=white" alt="Prisma" />
+  <img src="https://img.shields.io/badge/Zero_Knowledge-512BD4?style=flat-square&logo=springsecurity&logoColor=white" alt="ZK Proofs" />
+</p>
 
-## 💼 Business Development & Viability
+---
+
+## Vision
+
+> [!NOTE]  
+> **NFTs were supposed to redefine ownership. Instead, they became synonymous with speculation.**
+> 
+> Ownership can be faked. Assets can be duplicated. Identity is either exposed or completely absent. Compliance doesn’t exist.
+> So the market reacted accordingly: **NFTs are still seen as speculative toys, not serious assets.**
+
+**ZERA changes that.**  
+We are not building another marketplace. We are rebuilding the foundation of digital ownership.
+
+Most marketplaces optimize for hype, visibility, and speculation.  
+**ZERA optimizes for legitimacy, trust, and enforceability.**
+
+### The Paradigm Shift
+
+| Feature | Traditional NFT Platforms | ZERA |
+|---------|-------------------------|------|
+| **Core Focus** | Visibility and Hype | Verifiability and Legitimacy |
+| **Authenticity** | Assumed | Cryptographically Verified |
+| **Privacy** | Public and Exposed | Private Ownership |
+| **Compliance** | Non-existent | Enforceable via Math |
+
+---
+
+## Business Development & Viability
 
 ZERA unlocks participation from markets that traditional NFT platforms cannot reach. By embedding privacy and compliance at the protocol level, it enables:
 
@@ -60,76 +68,122 @@ This is where digital assets transition from speculative instruments to **financ
 
 ---
 
-## 🚀 Product
+## Product
 
 ZERA is a **verification-first, privacy-preserving** asset registry and marketplace. It replaces trust assumptions with cryptographic proof systems.
 
-### 🔑 Core Features
+### Core Features
 
-#### Verified Asset Registry
+<details>
+<summary><b>Verified Asset Registry</b></summary>
+<br/>
+
 - **Verification Mandatory:** Assets must be verified before listing.
 - **Fraud Prevention:** Prevents duplication and fake ownership.
 - **Marketplace Integrity:** Ensures complete ecosystem legitimacy.
 
-#### Proof of Authenticity
+</details>
+
+<details>
+<summary><b>Proof of Authenticity</b></summary>
+<br/>
+
 - **Creator Signatures:** Backed by verifiable creator signatures.
 - **Source Verification:** Strictly enforced at the contract level.
 - **Cryptographic Legitimacy:** Every asset is guaranteed authentic.
 
-#### Private Ownership
+</details>
+
+<details>
+<summary><b>Private Ownership</b></summary>
+<br/>
+
 - **Identity Protection:** Prove ownership without revealing identity.
 - **No Wallet Exposure:** Public addresses are kept private.
 - **Provable, Not Visible:** Ownership is a cryptographic fact, not a public spectacle.
 
-#### Proof of Eligibility
+</details>
+
+<details>
+<summary><b>Proof of Eligibility</b></summary>
+<br/>
+
 - **Zero-Knowledge KYC:** Verify compliance without exposing personal data.
 - **Private Trading:** Trade eligibility proven without revealing identity.
 - **Compliance via Math:** Achieved through cryptographic proofs, not surveillance.
 
-#### Private Transactions
+</details>
+
+<details>
+<summary><b>Private Transactions</b></summary>
+<br/>
+
 - **Secure Transfers:** Fully compliant and secure asset movement.
 - **Private Execution:** Trades happen under complete privacy.
 - **Step-by-step Verification:** Verified at every step of the transaction loop.
 
+</details>
+
 ---
 
-## 🔄 Product Flow
+## Product Flow
 
-### 🏗️ Asset Creation
-> **Upload → Sign → Verify → Register → Trade**
+<details>
+<summary><b>Asset Creation: Upload - Sign - Verify - Register - Trade</b></summary>
+<br/>
 
 1. Creator **signs** the asset.
 2. System **verifies** authenticity.
 3. Asset is **registered** and becomes tradable.
 
-### 💳 Buying an Asset
-> **Generate Proof → Verify Compliance → Execute Transfer**
+</details>
+
+<details>
+<summary><b>Buying an Asset: Generate Proof - Verify Compliance - Execute Transfer</b></summary>
+<br/>
 
 1. Buyer generates an **eligibility proof**.
 2. System verifies **compliance**.
 3. Ownership transfers **privately**.
 
-### 🔍 Ownership Verification
-> **Generate Proof → Verify → Confirm Ownership**
+</details>
+
+<details>
+<summary><b>Ownership Verification: Generate Proof - Verify - Confirm Ownership</b></summary>
+<br/>
 
 1. Ownership is verified **without revealing identity**.
 2. **No wallet exposure** during the process.
 3. Fully **trustless confirmation**.
 
+</details>
+
 ---
 
-## 🎯 Use Cases
+## Use Cases
+
+ZERA provides the foundational layer required for high-stakes digital asset management.
+
+<details>
+<summary><b>Explore Use Cases</b></summary>
+<br/>
 
 - **High-value digital art** with verifiable, private provenance.
 - **Tokenized Real-World Assets (RWAs)** requiring compliance.
 - **Private ownership** of highly sensitive digital assets.
 - **Institutional-grade** digital asset trading and clearing.
 
+</details>
+
 ---
 
-## 🔮 Future Scope
+## Future Scope
 
-ZERA is designed as a foundational layer for digital ownership. Planned expansions include:
+ZERA is designed as a foundational layer for digital ownership, with robust expansions planned for the network.
+
+<details>
+<summary><b>Planned Expansions</b></summary>
+<br/>
 
 - **Multi-Asset Class Support:** Real estate, securities, and Intellectual Property (IP).
 - **Regulatory Integrations:** Advanced compliance protocols tailored for global jurisdictions.
@@ -137,21 +191,9 @@ ZERA is designed as a foundational layer for digital ownership. Planned expansio
 - **Cross-Chain Verification:** Agnostic proof verification across multiple networks.
 - **Reputation Systems:** Advanced, privacy-preserving trust scores for network participants.
 
+</details>
+
 ---
-
-## 🛠️ Technology Stack
-
-<p align="center">
-  <img src="https://img.shields.io/badge/Midnight_Network-000000?style=flat-square&logo=polkadot&logoColor=white" alt="Midnight Network" />
-  <img src="https://img.shields.io/badge/Next.js-000000?style=flat-square&logo=nextdotjs&logoColor=white" alt="Next.js" />
-  <img src="https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" />
-  <img src="https://img.shields.io/badge/Node.js-339933?style=flat-square&logo=nodedotjs&logoColor=white" alt="Node.js" />
-  <img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=flat-square&logo=tailwindcss&logoColor=white" alt="Tailwind CSS" />
-  <img src="https://img.shields.io/badge/Prisma-2D3748?style=flat-square&logo=prisma&logoColor=white" alt="Prisma" />
-  <img src="https://img.shields.io/badge/Zero_Knowledge-512BD4?style=flat-square&logo=springsecurity&logoColor=white" alt="ZK Proofs" />
-  <img src="https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker" />
-  <img src="https://img.shields.io/badge/Yarn-2C8EBB?style=flat-square&logo=yarn&logoColor=white" alt="Yarn" />
-</p>
 
 ## Architecture
 
@@ -220,7 +262,7 @@ bun run deploy
 This will:
 1. Prompt you to create a new wallet or restore from an existing seed
 2. Display your wallet address for funding
-3. Wait for you to fund the wallet via the [Midnight Faucet](https://faucet.preprod.midnight.network/)
+3. Wait for you to fund the [Midnight Faucet](https://faucet.preprod.midnight.network/)
 4. Wait for DUST to be generated
 5. Deploy the contract
 6. Save deployment info to `deployment.json`
@@ -357,5 +399,5 @@ docker compose ps
 ---
 
 <p align="center">
-  Built with ❤️ during Hilo Hack
+  Built during Hilo Hack
 </p>
