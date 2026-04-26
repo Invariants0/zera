@@ -1,0 +1,32 @@
+{
+  "name": "@zera/contract",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./main.compact": "./dist/main.compact",
+    "./managed/*": "./dist/managed/*"
+  },
+  "scripts": {
+    "clean": "rm -rf dist",
+    "compile:compact": "compact compile src/main.compact src/managed/zera",
+    "build": "yarn run clean && yarn run compile:compact && tsc --project tsconfig.build.json && cp -Rf ./src/managed ./dist/managed && cp ./src/main.compact ./dist",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@midnight-ntwrk/compact-runtime": "0.15.0",
+    "@midnight-ntwrk/ledger-v8": "8.0.3",
+    "@midnight-ntwrk/midnight-js-contracts": "4.0.2",
+    "@midnight-ntwrk/midnight-js-types": "4.0.2"
+  },
+  "devDependencies": {
+    "@midnight-ntwrk/midnight-js-compact": "4.0.2",
+    "typescript": "^5.7.0"
+  }
+}
