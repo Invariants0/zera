@@ -33,7 +33,7 @@
   },
   "scripts": {
     "clean": "shx rm -rf dist src/managed",
-    "compact:compile": "wsl bash -l -c \"compact compile src/main.compact src/managed/zera\"",
+    "compact:compile": "compact compile src/main.compact src/managed/zera",
     "build": "shx rm -rf dist && tsc --project tsconfig.build.json && shx cp -Rf ./src/managed ./dist/managed && shx cp ./src/main.compact ./dist/",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "cross-env NODE_OPTIONS='--experimental-vm-modules' vitest run",
