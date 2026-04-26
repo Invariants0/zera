@@ -22,6 +22,11 @@ export default function CreateAssetPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [localProgress, setLocalProgress] = useState("Idle");
   const [successData, setSuccessData] = useState<{ txHash: string; assetId: string, name: string } | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const imageLabel = useMemo(() => imageFile?.name ?? "Choose image", [imageFile]);
   const attachmentLabel = useMemo(() => attachmentFile?.name ?? "Choose file", [attachmentFile]);
@@ -124,6 +129,9 @@ export default function CreateAssetPage() {
         metadataUri: `ipfs://${metadataUpload.cid}`,
         creator: walletAddress!,
         isPrivate: true,
+        name: assetName.trim(),
+        description: description.trim(),
+        imageUrl: imageUploadCid ? `https://ipfs.io/ipfs/${imageUploadCid}` : undefined,
       });
 
       if (!minted.success) {
@@ -146,6 +154,8 @@ export default function CreateAssetPage() {
       setIsSubmitting(false);
     }
   };
+
+  if (!isMounted) return null;
 
   return (
     <div className="w-full max-w-[900px] mx-auto p-6 md:p-10 pb-32">

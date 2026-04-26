@@ -66,7 +66,7 @@ function ExploreContent() {
     <div className="w-full flex flex-col min-h-screen">
       
       {/* Header Area */}
-      <div className="px-6 md:px-10 py-8 border-b border-white/5">
+      <div className="px-6 md:px-10 py-8 border-b border-white/5 sticky top-0 z-10 bg-obsidian/80 backdrop-blur-md">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-6">
           <h1 className="text-3xl font-grotesk font-bold uppercase tracking-tight">Explore Assets</h1>
           

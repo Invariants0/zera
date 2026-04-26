@@ -56,12 +56,19 @@ export default function AssetDetail({ params }: { params: Promise<{ id: string }
         setAsset(assetData);
 
         // Fetch metadata from IPFS
-        if (assetData.metadataUri) {
+        if (assetData.metadataUri && assetData.metadataUri.startsWith('ipfs://')) {
           const cid = assetData.metadataUri.replace('ipfs://', '');
-          const metadataBlob = await getFromIPFS(cid);
-          const metadataText = await metadataBlob.text();
-          const metadataJson = JSON.parse(metadataText);
-          setMetadata(metadataJson);
+          try {
+            const metadataBlob = await getFromIPFS(cid);
+            const metadataText = await metadataBlob.text();
+            const metadataJson = JSON.parse(metadataText);
+            setMetadata(metadataJson);
+          } catch (ipfsError) {
+            console.error('IPFS fetch failed:', ipfsError);
+            toast.error('Failed to load extended metadata from IPFS');
+          }
+        } else if (assetData.metadataUri && assetData.metadataUri.startsWith('hash:')) {
+          console.log('Asset has hash-only metadata, skipping IPFS fetch');
         }
 
         // Check if user has purchased this asset
@@ -270,12 +277,18 @@ export default function AssetDetail({ params }: { params: Promise<{ id: string }
               <span className="font-mono text-sm font-bold text-lime">{asset.price}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="font-mono text-[10px] text-text-muted uppercase">Metadata (IPFS)</span>
-              <a href={asset.metadataUri.replace('ipfs://', 'http://localhost:8080/fetch/')}
-                target="_blank" rel="noopener noreferrer"
-                className="font-mono text-xs text-lime hover:underline flex items-center gap-1">
-                View <ExternalLink className="w-3 h-3" />
-              </a>
+              <span className="font-mono text-[10px] text-text-muted uppercase">Metadata</span>
+              {asset.metadataUri.startsWith('ipfs://') ? (
+                <a href={asset.metadataUri.replace('ipfs://', 'http://localhost:8080/fetch/')}
+                  target="_blank" rel="noopener noreferrer"
+                  className="font-mono text-xs text-lime hover:underline flex items-center gap-1">
+                  View <ExternalLink className="w-3 h-3" />
+                </a>
+              ) : (
+                <span className="font-mono text-[9px] text-text-muted truncate max-w-[150px]">
+                  {asset.metadataUri}
+                </span>
+              )}
             </div>
             <div className="flex justify-between items-center">
               <span className="font-mono text-[10px] text-text-muted uppercase">Created</span>
@@ -313,12 +326,32 @@ export default function AssetDetail({ params }: { params: Promise<{ id: string }
             </Button>
 
             {isOwner && (
-              <Link href={`/transfers?assetId=${asset.id}`}>
-                <Button variant="secondary" className="h-12 gap-2 w-full border-white/10">
-                  <ArrowRightLeft className="w-4 h-4" /> Transfer Ownership
+              <div className="flex flex-col gap-3">
+                <Link href={`/transfers?assetId=${asset.id}`} className="w-full">
+                  <Button variant="secondary" className="h-12 gap-2 w-full border-white/10">
+                    <ArrowRightLeft className="w-4 h-4" /> Transfer Ownership
+                  </Button>
+                </Link>
+                <Button 
+                  variant="secondary" 
+                  className="h-12 gap-2 border-red-500/20 text-red-400 hover:bg-red-500/10 hover:border-red-500/40"
+                  onClick={async () => {
+                    if (window.confirm('Are you sure you want to delete this asset? This will remove it from the Zera registry (local database).')) {
+                      const res = await fetch(`/api/assets/${id}`, { method: 'DELETE' });
+                      if (res.ok) {
+                        toast.success('Asset deleted successfully');
+                        window.location.href = '/explore';
+                      } else {
+                        toast.error('Failed to delete asset');
+                      }
+                    }
+                  }}
+                >
+                  <Lock className="w-4 h-4" /> Delete Asset (Registry)
                 </Button>
-              </Link>
+              </div>
             )}
+
 
             <Button variant="secondary" className={`h-12 gap-2 border-white/10 ${watchlisted ? 'border-red-500/40 text-red-400' : ''}`} onClick={toggleWatchlist}>
               <Heart className={`w-4 h-4 ${watchlisted ? 'fill-red-500 text-red-500' : ''}`} />
