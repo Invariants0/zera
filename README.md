@@ -232,189 +232,73 @@ The current implementation is just the beginning. ZERA is architected to scale i
 
 <img width="1692" height="930" alt="ChatGPT Image Apr 27, 2026, 04_39_54 AM" src="https://github.com/user-attachments/assets/0e3f7fd1-1110-4152-b0e6-96ae97f5c871" />
 
-<summary><b>Prerequisites</b></summary>
-<br/>
+## Getting Started
+
+Follow these steps to quickly set up and run ZERA locally.
+
+### Prerequisites
 
 > [!WARNING]  
 > Ensure you have the exact Node and Bun versions specified to avoid compilation errors.
 
-- Node.js >= 22.0.0
-- Bun >= 1.0.0
-- Docker (for local network and DB)
-- Cargo/Rust (for storage service)
-- Compact compiler (for contract compilation)
-
-</details>
-
-<details>
-<summary><b>Installation & Compilation</b></summary>
-<br/>
-
-### Installation
-
-```bash
-bun install
-```
-
-### Setup the Entire Project
+- **Node.js**: `>= 22.0.0`
+- **Bun**: `>= 1.0.0`
+- **Docker**: For running the local network and PostgreSQL DB
+- **Cargo/Rust**: For running the storage service
 
 > [!IMPORTANT]  
-> Before deploying or testing, run the preparation script to compile the smart contracts, set up the database, and configure services:
+> **Compact Compiler & Midnight Network Setup**
+> For full installation instructions regarding the Compact compiler and Midnight node dependencies, please head over to the [Midnight Developer Documentation](https://docs.midnight.network/getting-started/installation).
 
-```bash
-bun run project:prepare
-```
+### Installation & Quick Start
 
-This generates the contract artifacts, sets up Prisma, and starts the local Docker services.
+1. **Install Dependencies**
+   ```bash
+   bun install
+   ```
 
-</details>
+2. **Setup the Entire Project**
+   This script compiles the smart contracts, sets up the Prisma database, and configures the local Docker services.
+   ```bash
+   bun run project:prepare
+   ```
 
-<details>
-<summary><b>Deploy to Preprod Network</b></summary>
-<br/>
+3. **Start Local Development**
+   Boot up the local network, deploy the contract locally, and launch the Next.js frontend and Rust storage API simultaneously.
+   ```bash
+   bun run start:all
+   ```
 
-Deploy the contract to Midnight's preprod network:
+### Other Useful Commands
 
-```bash
-bun run deploy
-```
+- `bun run test` — Run smart contract tests against the local network.
+- `bun run deploy` — Deploy the contracts to the Midnight preprod network.
+- `bun run services:down` — Spin down all local Docker services.
 
-This will:
-1. Prompt you to create a new wallet or restore from an existing seed
-2. Display your wallet address for funding
-3. Wait for you to fund the [Midnight Faucet](https://faucet.preprod.midnight.network/)
-4. Wait for DUST to be generated
-5. Deploy the contract
-6. Save deployment info to `deployment.json`
+---
 
-> [!NOTE]  
-> The preprod deployment uses the public proof server at `https://lace-proof-pub.preprod.midnight.network`, so you don't need to run Docker.
-
-</details>
-
-<details>
-<summary><b>Local Development & Testing</b></summary>
-<br/>
-
-> [!TIP]
-> For local testing, you can use the built-in commands to manage services and run tests.
-
-```bash
-# Start local network and services (indexer, node, proof server, postgres)
-bun run services:up
-
-# Run tests against local network
-bun run test
-
-# Stop local network and services
-bun run services:down
-
-# Or start everything for local development (Next.js, Storage, Contract deploy)
-bun run start:all
-```
-
-</details>
-
-<details>
-<summary><b>Network Configuration</b></summary>
-<br/>
-
-The project supports two networks:
-
-- **Local**: Uses Docker Compose services (requires `bun run services:up`)
-- **Preprod**: Uses public Midnight preprod endpoints (no Docker needed)
-
-> [!CAUTION]
-> Always verify the network configuration before executing deployment commands to avoid deploying sensitive data locally or test data to preprod.
-
-Set the network via the `MIDNIGHT_NETWORK` environment variable:
-- `local` - Local development network
-- `preprod` - Midnight preprod testnet (default for deploy)
-
-</details>
-
-<details>
-<summary><b>Project Structure</b></summary>
-<br/>
+## Project Structure
 
 ```text
 .
 ├── web/                      # Next.js Frontend App (Zustand, Tailwind, Prisma)
 ├── contracts/                # Midnight Network Smart Contracts (Compact)
 ├── storage/                  # Rust/Cargo Storage Service
-├── scripts/                  # Utility scripts
-├── package.json              # Bun Workspace configuration
+├── docs/                     # Detailed architectural and setup documentation
+├── scripts/                  # Utility and setup scripts
+├── package.json              # Root Bun Workspace configuration
 └── compose.yml               # Docker services for Midnight + Postgres
 ```
 
-</details>
+---
 
-<details>
-<summary><b>Smart Contract</b></summary>
-<br/>
+## Documentation
 
-The contract (`contracts/main.compact`) provides an Asset Registry with the following features:
+For deep dives into the ZERA platform, please refer to our dedicated documentation files located in the `docs/` folder:
 
-### Ledger State
-- **assetCount**: Counter tracking total registered assets
-- **assets**: Map of registered assets indexed by ID
-- **commitments**: Map of asset commitments for duplicate prevention
-- **ownershipCommitments**: Map tracking asset ownership relationships
-
-### Circuits (Functions)
-- **registerAsset**(assetHash, metadataHash, timestamp) - Register a new asset
-- **verifyAsset**(assetHash, creatorPublicKey) - Verify asset authenticity
-- **assetExists**(id) - Check if an asset exists
-- **getAsset**(id) - Retrieve asset data
-- **assignOwnership**(assetId) - Assign ownership to an asset
-- **transferOwnership**(assetId, newOwnerPublicKey) - Transfer asset ownership
-- **verifyOwnership**(assetId, publicKey) - Verify asset ownership
-
-</details>
-
-<details>
-<summary><b>Available Scripts</b></summary>
-<br/>
-
-- `bun install` - Install dependencies for all workspaces
-- `bun run project:prepare` - Full project setup (compiles, copies artifacts, DB setup)
-- `bun run services:up` - Start local Docker services
-- `bun run services:down` - Stop local Docker services
-- `bun run start:all` - Start web UI, storage API, and deploy locally
-- `bun run test` - Run smart contract tests
-- `bun run deploy` - Deploy contracts to the network
-
-</details>
-
-<details>
-<summary><b>Troubleshooting</b></summary>
-<br/>
-
-### Native Module Build Warnings
-
-> [!NOTE]  
-> You may see warnings about `cpu-features` or other native modules during installation. These are non-fatal and don't affect functionality.
-
-### Contract Not Found
-
-> [!WARNING]  
-> If you see "Cannot find module '../contracts/index.js'", run:
-
-```bash
-bun run compact:compile
-```
-
-### Local Network Issues
-
-> [!CAUTION]
-> If local tests fail, ensure Docker is running and services are healthy:
-
-```bash
-bun run services:up
-docker compose ps
-```
-
-</details>
+- 🏗️ **[Architecture & Design](./docs/ARCHITECTURE.md)** — Detailed breakdown of the ZERA protocol, zero-knowledge proofs integration, and smart contract design.
+- ⚙️ **[Local Testing Guide](./docs/LOCAL_TESTING.md)** — Comprehensive guide on testing workflows and network configurations.
+- 🚀 **[Setup Guide](./docs/SETUP.md)** — In-depth setup instructions for different environments and advanced troubleshooting.
 
 ---
 
