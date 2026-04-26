@@ -1,22 +1,38 @@
-# ZERA
+<div align="center">
+  <h1>🏛️ ZERA</h1>
+  <p><strong>The Institutional-Grade Digital Asset Marketplace</strong></p>
+</div>
 
-NFTs are still seen as speculative toys, not serious assets.
-ZERA changes that by turning digital assets into verified, private, and compliant financial primitives built for real ownership.
+<br />
 
-Most marketplaces optimized for hype, visibility, and speculation.
-ZERA optimizes for legitimacy, trust, and enforceability.
+> NFTs are still seen as speculative toys, not serious assets.
+> 
+> **ZERA changes that** by turning digital assets into **verified, private, and compliant** financial primitives built for *real ownership*.
 
-<img width="1983" height="793" alt="zerabanner" src="https://github.com/user-attachments/assets/944005ae-5f06-4c8e-8303-9191dc2ce71f" />
+### 🌐 The Paradigm Shift
+
+Most marketplaces are optimized for *hype, visibility, and speculation*.  
+**ZERA** optimizes for **legitimacy, trust, and enforceability**.
+
+<br />
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Midnight_Network-000000?style=for-the-badge&logo=blockchain&logoColor=white" alt="Midnight Network" />
-  <img src="https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white" alt="Next.js" />
-  <img src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
-  <img src="https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white" alt="Node.js" />
-  <img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwindcss&logoColor=white" alt="Tailwind CSS" />
-  <img src="https://img.shields.io/badge/Prisma-2D3748?style=for-the-badge&logo=prisma&logoColor=white" alt="Prisma" />
-  <img src="https://img.shields.io/badge/ZK_Proofs-8A2BE2?style=for-the-badge&logo=shield&logoColor=white" alt="ZK Proofs" />
+  <img width="1983" height="793" alt="zerabanner" src="https://github.com/user-attachments/assets/944005ae-5f06-4c8e-8303-9191dc2ce71f" />
 </p>
+
+<br />
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Midnight_Network-1E1E2E?style=flat-square&logo=polkadot&logoColor=white" alt="Midnight Network" />
+  <img src="https://img.shields.io/badge/Next.js-000000?style=flat-square&logo=nextdotjs&logoColor=white" alt="Next.js" />
+  <img src="https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/Node.js-339933?style=flat-square&logo=nodedotjs&logoColor=white" alt="Node.js" />
+  <img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=flat-square&logo=tailwindcss&logoColor=white" alt="Tailwind CSS" />
+  <img src="https://img.shields.io/badge/Prisma-2D3748?style=flat-square&logo=prisma&logoColor=white" alt="Prisma" />
+  <img src="https://img.shields.io/badge/ZK_Proofs-512BD4?style=flat-square&logo=springsecurity&logoColor=white" alt="ZK Proofs" />
+</p>
+
+<br />
 
 An asset registry and ownership management platform for the Midnight Network that enables cryptographically-verified asset registration, verification, and ownership transfer on the blockchain.
 
