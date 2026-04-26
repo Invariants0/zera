@@ -23,7 +23,12 @@
     "jsx": "react-jsx",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": [
+        "./src/*"
+      ],
+      "contracts/*": [
+        "./contracts/*"
+      ]
     },
     "plugins": [
       {
@@ -35,7 +40,9 @@
     "src/**/*.ts",
     "contract/**/*.ts",
     ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts"
+    ".next/dev/types/**/*.ts",
+    "contracts/index.ts",
+    "src/fund-wallet.ts"
   ],
   "exclude": [
     "node_modules"

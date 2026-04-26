@@ -32,6 +32,8 @@ services:
       timeout: 5s
       retries: 20
       start_period: 10s
+    volumes:
+      - indexer-data:/var/lib/indexer
     depends_on:
       node:
         condition: service_healthy
@@ -49,3 +51,9 @@ services:
     environment:
       CFG_PRESET: 'dev'
       SIDECHAIN_BLOCK_BENEFICIARY: '04bcf7ad3be7a5c790460be82a713af570f22e0f801f6659ab8e84a52be6969e'
+    volumes:
+      - node-data:/node
+
+volumes:
+  node-data:
+  indexer-data:
