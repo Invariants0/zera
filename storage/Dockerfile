@@ -29,15 +29,15 @@ COPY --from=builder /app/target/release/zera-ipfs /app/zera-ipfs
 RUN mkdir -p /app/downloads
 
 # Expose port
-EXPOSE 10000
+EXPOSE 8080
 
 # Environment variables (override with -e or docker-compose)
-ENV PORT=10000
+ENV PORT=8080
 ENV RUST_LOG=info
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:10000/health || exit 1
+  CMD curl -f http://localhost:8080/health || exit 1
 
 # Run the binary
 CMD ["./zera-ipfs"]

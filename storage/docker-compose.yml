@@ -7,16 +7,16 @@ services:
       dockerfile: Dockerfile
     container_name: zera-ipfs
     ports:
-      - "10000:10000"
+      - "8080:8080"
     environment:
       - PINATA_JWT=${PINATA_JWT}
-      - PORT=10000
+      - PORT=8080
       - RUST_LOG=info
     volumes:
       - ./downloads:/app/downloads
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:10000/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:10000/health" ]
       interval: 30s
       timeout: 3s
       retries: 3
