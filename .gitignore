@@ -1,12 +1,56 @@
-/node_modules
-/contracts/managed
-/contracts/hello-world.compact
-/logs
-deployment.json
-/midnight-level-db
+# Dependencies
+node_modules/
+**/node_modules/
+.pnp
+.pnp.js
 
-# Next.js
-/.next/
-/out/
+# Build artifacts
+dist/
 build/
-.env*.local
+.next/
+out/
+target/
+**/target/
+**/managed/
+contracts/dist/
+
+
+# Midnight specific
+midnight-level-db/
+indexer-db/
+proof-server-db/
+**/midnight-level-db/
+deployment.json
+logs/
+*.log
+contracts/logs/
+
+# Compact Compiler
+# Ignore generated compact files, but keep src
+*.compact
+!contracts/src/*.compact
+
+# Environment
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+web/.env
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Prisma
+web/prisma/dev.db
+web/prisma/dev.db-journal
+
+# Storage Service (Rust)
+storage/downloaded_*
+storage/target/
+
+.code-review-graph/*
