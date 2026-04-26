@@ -2,6 +2,7 @@
 
 An asset registry and ownership management smart contract for the Midnight Network that enables cryptographically-verified asset registration, verification, and ownership transfer on the blockchain.
 
+<img width="1983" height="793" alt="zerabanner" src="https://github.com/user-attachments/assets/944005ae-5f06-4c8e-8303-9191dc2ce71f" />
 
 ## Prerequisites
 
