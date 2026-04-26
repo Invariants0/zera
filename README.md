@@ -296,9 +296,9 @@ Follow these steps to quickly set up and run ZERA locally.
 
 For deep dives into the ZERA platform, please refer to our dedicated documentation files located in the `docs/` folder:
 
-- 🏗️ **[Architecture & Design](./docs/ARCHITECTURE.md)** — Detailed breakdown of the ZERA protocol, zero-knowledge proofs integration, and smart contract design.
-- ⚙️ **[Local Testing Guide](./docs/LOCAL_TESTING.md)** — Comprehensive guide on testing workflows and network configurations.
-- 🚀 **[Setup Guide](./docs/SETUP.md)** — In-depth setup instructions for different environments and advanced troubleshooting.
+- **[Architecture & Design](./docs/ARCHITECTURE.md)** — Detailed breakdown of the ZERA protocol, zero-knowledge proofs integration, and smart contract design.
+- **[Local Testing Guide](./docs/LOCAL_TESTING.md)** — Comprehensive guide on testing workflows and network configurations.
+- **[Setup Guide](./docs/SETUP.md)** — In-depth setup instructions for different environments and advanced troubleshooting.
 
 ---
 
