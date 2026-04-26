@@ -1,28 +1,33 @@
 import { NextResponse } from 'next/server';
-import { listAllOnChainAssets } from '@/server/contracts/assetRegistryService';
+import { listAllOnChainAssets, readDeploymentAddress } from '@/server/contracts/assetRegistryService';
 import { prisma } from '@/lib/prisma';
 
 export const runtime = 'nodejs';
 
 export async function POST() {
   try {
+    const currentAddress = await readDeploymentAddress();
     const onChainAssets = await listAllOnChainAssets();
     let syncedCount = 0;
 
     for (const asset of onChainAssets) {
       const existing = await prisma.asset.findUnique({ where: { id: asset.id } });
       if (!existing) {
+        // Since we can't reverse the sha256 metadataHash to get the IPFS CID, 
+        // we use a placeholder until the user updates it, OR if it's found in off-chain DB it wouldn't hit this.
         await prisma.asset.create({
           data: {
             id: asset.id,
             contractAssetId: asset.id,
-            metadataUri: asset.metadataHashHex,
+            metadataUri: `hash:${asset.metadataHashHex}`,
+            metadataHash: asset.metadataHashHex,
+            contractAddress: currentAddress,
             creator: asset.creatorPublicKeyHex,
             owner: asset.creatorPublicKeyHex,
             isPrivate: false,
             verified: true,
-            title: `On-chain Asset #${asset.id}`,
-            description: `Discovered on the Midnight Registry. Creator: ${asset.creatorPublicKeyHex}`,
+            title: `Asset #${asset.id}`,
+            description: `Discovered on the Midnight Registry. Creator: ${asset.creatorPublicKeyHex.substring(0, 12)}...`,
             imageUrl: 'https://images.unsplash.com/photo-1634117622592-114e3024ff27?auto=format&fit=crop&q=80&w=800',
             price: '0 ZERA',
             badges: ['verified'],
