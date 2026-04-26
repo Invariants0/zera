@@ -1,7 +1,24 @@
 import { rmSync } from 'node:fs';
 
-const pathsToRemove = ['logs', 'node_modules', '.next', 'dist', 'storage/ipfs/target'];
+const pathsToRemove = [
+  'node_modules',
+  'logs',
+  'contracts/node_modules',
+  'contracts/dist',
+  'contracts/src/managed',
+  'web/node_modules',
+  'web/.next',
+  'web/dist',
+  'web/public/managed'
+];
 
+console.log('🧹 Cleaning project...');
 for (const path of pathsToRemove) {
-  rmSync(path, { recursive: true, force: true });
+  try {
+    rmSync(path, { recursive: true, force: true });
+    console.log(`  - Removed: ${path}`);
+  } catch (err) {
+    console.error(`  - Failed to remove ${path}:`, err.message);
+  }
 }
+console.log('✅ Clean complete.');
