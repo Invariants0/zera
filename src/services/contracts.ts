@@ -5,6 +5,9 @@ export interface RegisterAssetParams {
   metadataUri: string;
   creator: string;
   isPrivate: boolean;
+  name?: string;
+  description?: string;
+  imageUrl?: string;
 }
 
 export interface AssignOwnershipParams {

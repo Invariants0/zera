@@ -40,7 +40,7 @@ export const getAssetById = async (id: string): Promise<Asset> => {
 // Get assets by owner
 export const getAssetsByOwner = async (ownerAddress: string): Promise<Asset[]> => {
   const response = await apiClient.get(`/assets/owner/${ownerAddress}`);
-  return response.data;
+  return response.data.assets;
 };
 
 // Verify asset ownership
