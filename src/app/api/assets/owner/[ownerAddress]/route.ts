@@ -9,14 +9,24 @@ export async function GET(
 ) {
   const { ownerAddress } = await params;
 
+  // Local Dev Fix: Map the 'Alice' shielded address (000...00) to her hex public key (b26...)
+  // so that synced assets from the local node appear in the 'My Assets' page.
+  const isAlice = ownerAddress.startsWith('0000000000000000000000000000000000000000000000000000000000000000');
+  const aliceHex = 'b26236c2575a7b0e24ed9a2d3a647555bcd6e512c73820d4d4dc16614bdcb277';
+  
+  const ownerQuery = isAlice 
+    ? { OR: [{ owner: ownerAddress }, { owner: aliceHex }] }
+    : { owner: ownerAddress };
+
   const [assets, activities] = await prisma.$transaction([
-    prisma.asset.findMany({ where: { owner: ownerAddress } }),
+    prisma.asset.findMany({ where: ownerQuery }),
     prisma.activity.findMany({
-      where: { to: ownerAddress },
+      where: { OR: [{ to: ownerAddress }, isAlice ? { to: aliceHex } : {}] },
       orderBy: { timestamp: 'desc' },
       take: 5,
     }),
   ]);
+
 
   const portfolioValue = assets.reduce((acc, a) => {
     const v = Number.parseFloat((a.price ?? '0').replace(/[^0-9.]/g, ''));

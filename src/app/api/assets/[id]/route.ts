@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-import { getAssetById } from '@/server/assets/assetService';
+import { getAssetById, deleteAsset } from '@/server/assets/assetService';
 
 export const runtime = 'nodejs';
 
@@ -16,4 +16,18 @@ export async function GET(
   }
 
   return NextResponse.json(asset, { status: 200 });
+}
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params;
+  const result = await deleteAsset(id);
+
+  if (!result.success) {
+    return NextResponse.json({ message: result.message }, { status: 404 });
+  }
+
+  return NextResponse.json(result, { status: 200 });
 }
