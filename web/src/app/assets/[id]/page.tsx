@@ -5,7 +5,7 @@ import { use } from "react";
 import { Card } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
 import { Button } from "../../../components/ui/Button";
-import { Heart, CheckCircle2, ArrowRightLeft, ExternalLink, Shield, Lock, Download, ShoppingCart } from "lucide-react";
+import { Heart, CheckCircle2, ArrowRightLeft, ExternalLink, Shield, ShieldCheck, Lock, Download, ShoppingCart } from "lucide-react";
 import { useWallet } from "../../../hooks/useWallet";
 import { Loading } from "../../../components/ui/Loading";
 import { EmptyState } from "../../../components/ui/EmptyState";
@@ -49,6 +49,12 @@ export default function AssetDetail({ params }: { params: Promise<{ id: string }
   const [isDownloading, setIsDownloading] = useState(false);
   const [hasPurchased, setHasPurchased] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [isClaiming, setIsClaiming] = useState(false);
+  const [ownershipStatus, setOwnershipStatus] = useState<{
+    exists: boolean;
+    verified: boolean | null;
+  } | null>(null);
+
 
   const loadAsset = async () => {
     try {
@@ -85,7 +91,21 @@ export default function AssetDetail({ params }: { params: Promise<{ id: string }
           setWatchlisted(isWatchlisted);
         }
 
+        // Check on-chain ownership status
+        const ownershipRes = await fetch('/api/proofs/ownership', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ assetId: id, owner: walletAddress }),
+        });
+        if (ownershipRes.ok) {
+          const ownershipData = await ownershipRes.json();
+          setOwnershipStatus({
+            exists: ownershipData.data?.ownershipExists || false,
+            verified: ownershipData.data?.verified || false
+          });
+        }
       }
+
     } catch (error) {
       console.error('Failed to load asset:', error);
       setAsset(null);
@@ -127,11 +147,30 @@ export default function AssetDetail({ params }: { params: Promise<{ id: string }
       const data = await res.json();
       if (data.success && data.data?.verified) {
         toast.success(`Ownership verified! Proof ID: ${data.data.proofId}`, { id: tid });
+        setOwnershipStatus({ exists: true, verified: true });
       } else {
         toast.error('Ownership could not be verified', { id: tid });
       }
     } catch { toast.error('Verification failed', { id: tid }); }
   };
+
+  const handleClaimOwnership = async () => {
+    if (!walletAddress) { toast.error('Connect wallet first'); return; }
+    const tid = toast.loading('Claiming ownership on-chain...');
+    setIsClaiming(true);
+    try {
+      const res = await fetch(`/api/assets/${id}/claim`, { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Ownership claimed! You can now transfer this asset.', { id: tid });
+        loadAsset();
+      } else {
+        toast.error(data.message || 'Claim failed', { id: tid });
+      }
+    } catch { toast.error('Claim failed', { id: tid }); }
+    finally { setIsClaiming(false); }
+  };
+
 
   const handlePurchase = async () => {
     if (!isConnected || !walletAddress) {
@@ -316,6 +355,19 @@ export default function AssetDetail({ params }: { params: Promise<{ id: string }
                 {isPurchasing ? 'Processing...' : `Purchase for ${asset.price} tNight`}
               </Button>
             )}
+
+            {isOwner && ownershipStatus && !ownershipStatus.exists && (
+              <Button 
+                variant="primary" 
+                className="h-12 gap-2 bg-lime text-black hover:bg-lime/90" 
+                onClick={handleClaimOwnership}
+                disabled={isClaiming}
+              >
+                <ShieldCheck className="w-4 h-4" /> 
+                {isClaiming ? 'Claiming...' : 'Claim On-Chain Ownership'}
+              </Button>
+            )}
+
 
             {(isOwner || hasPurchased) && metadata?.file && (
               <Button 
