@@ -167,29 +167,53 @@ function ExploreContent() {
                )}
              </div>
              <div className="space-y-4 font-mono text-xs">
-               <label className="flex items-center justify-between cursor-pointer group">
-                 <span className="text-text-secondary group-hover:text-white transition-colors">Verified Only</span>
+               <div className="flex items-center justify-between cursor-pointer group">
+                 <div className="flex items-center gap-2">
+                   <span className="text-text-secondary group-hover:text-white transition-colors">Verified Only</span>
+                   <div className="group/tip relative">
+                     <span className="cursor-help text-text-muted hover:text-lime transition-colors">?</span>
+                     <div className="absolute left-0 bottom-full mb-2 w-48 p-3 bg-obsidian border border-white/10 rounded-xl text-[10px] text-text-secondary leading-relaxed opacity-0 invisible group-hover/tip:opacity-100 group-hover/tip:visible transition-all z-30 shadow-2xl">
+                       Only show assets with a valid <span className="text-lime">ZK-Proof</span> of authenticity from the original creator.
+                     </div>
+                   </div>
+                 </div>
                  <input
                    type="checkbox"
                    checked={verifiedOnly}
                    onChange={(e) => setVerifiedOnly(e.target.checked)}
                    className="w-4 h-4 rounded border-white/20 bg-black text-lime focus:ring-lime/50"
                  />
-               </label>
-               <label className="flex items-center justify-between cursor-pointer group">
-                 <span className="text-text-secondary group-hover:text-white transition-colors">Privacy Enabled</span>
+               </div>
+               <div className="flex items-center justify-between cursor-pointer group">
+                 <div className="flex items-center gap-2">
+                   <span className="text-text-secondary group-hover:text-white transition-colors">Privacy Enabled</span>
+                   <div className="group/tip relative">
+                     <span className="cursor-help text-text-muted hover:text-lime transition-colors">?</span>
+                     <div className="absolute left-0 bottom-full mb-2 w-48 p-3 bg-obsidian border border-white/10 rounded-xl text-[10px] text-text-secondary leading-relaxed opacity-0 invisible group-hover/tip:opacity-100 group-hover/tip:visible transition-all z-30 shadow-2xl">
+                       Show assets using <span className="text-lime">Shielded State</span>, ensuring only the owner can view metadata.
+                     </div>
+                   </div>
+                 </div>
                  <input
                    type="checkbox"
                    checked={privateOnly}
                    onChange={(e) => setPrivateOnly(e.target.checked)}
                    className="w-4 h-4 rounded border-white/20 bg-black text-lime focus:ring-lime/50"
                  />
-               </label>
+               </div>
              </div>
            </div>
-
+ 
            <div className="pt-8 border-t border-white/5">
-             <h3 className="font-mono text-[11px] font-bold text-white uppercase tracking-widest mb-6">Price Range (ZERA)</h3>
+             <div className="flex items-center gap-2 mb-6">
+               <h3 className="font-mono text-[11px] font-bold text-white uppercase tracking-widest">Price Range (ZERA)</h3>
+               <div className="group/tip relative">
+                 <span className="cursor-help text-text-muted hover:text-lime transition-colors">?</span>
+                 <div className="absolute left-0 bottom-full mb-2 w-48 p-3 bg-obsidian border border-white/10 rounded-xl text-[10px] text-text-secondary leading-relaxed opacity-0 invisible group-hover/tip:opacity-100 group-hover/tip:visible transition-all z-30 shadow-2xl">
+                   Filter artifacts by their registry-listed price in <span className="text-lime">ZERA</span> tokens.
+                 </div>
+               </div>
+             </div>
              <div className="space-y-4">
                <div className="flex items-center gap-3">
                  <Input 
@@ -207,14 +231,22 @@ function ExploreContent() {
                  />
                </div>
                <Button 
-                variant="secondary" 
-                className="w-full h-11 border-white/10 text-[10px] font-mono font-bold uppercase tracking-widest hover:border-lime/30"
+                variant="primary" 
+                className="w-full h-11 bg-lime text-black border-none text-[10px] font-mono font-bold uppercase tracking-widest hover:bg-lime/90"
                >
-                Refine Search
+                Apply Filters
                </Button>
+               {(priceRange.min || priceRange.max) && (
+                 <button 
+                  onClick={() => setPriceRange({ min: "", max: "" })}
+                  className="w-full text-[9px] font-mono uppercase text-text-muted hover:text-white transition-colors"
+                 >
+                  Reset Price
+                 </button>
+               )}
              </div>
            </div>
-
+ 
            <div className="pt-8 border-t border-white/5">
               <h3 className="font-mono text-[11px] font-bold text-white uppercase tracking-widest mb-6">Sort By</h3>
               <select className="w-full bg-black/60 border border-white/10 rounded-xl h-11 px-4 font-mono text-xs text-text-secondary focus:outline-none focus:border-lime/50 appearance-none cursor-pointer">

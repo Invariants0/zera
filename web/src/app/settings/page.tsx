@@ -14,8 +14,75 @@ import { useWallet } from "../../hooks/useWallet";
 import toast from "react-hot-toast";
 
 export default function Settings() {
-  const { walletAddress, walletBalance: balance } = useWallet();
+  const { walletAddress, walletBalance: balance, isConnected } = useWallet();
   const [activeTab, setActiveTab] = useState("profile");
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [isLoadingSessions, setIsLoadingSessions] = useState(false);
+
+  useEffect(() => {
+    if (walletAddress && activeTab === "security") {
+      fetchSessions();
+    }
+  }, [walletAddress, activeTab]);
+
+  useEffect(() => {
+    if (walletAddress && isConnected) {
+      registerSession();
+    }
+  }, [walletAddress, isConnected]);
+
+  const fetchSessions = async () => {
+    setIsLoadingSessions(true);
+    try {
+      const res = await fetch(`/api/sessions?userId=${walletAddress}`);
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setSessions(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch sessions:", error);
+    } finally {
+      setIsLoadingSessions(false);
+    }
+  };
+
+  const registerSession = async () => {
+    try {
+      await fetch("/api/sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: walletAddress,
+          userAgent: navigator.userAgent,
+          isCurrent: true,
+        }),
+      });
+    } catch (error) {
+      console.error("Failed to register session:", error);
+    }
+  };
+
+  const revokeSession = async (id: string) => {
+    try {
+      const res = await fetch(`/api/sessions?id=${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setSessions(sessions.filter(s => s.id !== id));
+        toast.success("Session revoked");
+      }
+    } catch (error) {
+      toast.error("Failed to revoke session");
+    }
+  };
+
+  const getBrowserName = (ua: string) => {
+    if (ua.includes("Brave")) return "Brave Browser";
+    if (ua.includes("Edg")) return "Microsoft Edge";
+    if (ua.includes("Chrome")) return "Google Chrome";
+    if (ua.includes("Firefox")) return "Mozilla Firefox";
+    if (ua.includes("Safari")) return "Apple Safari";
+    return "Web Browser";
+  };
+
   const [isCopied, setIsCopied] = useState(false);
 
   const copyAddress = () => {
@@ -192,12 +259,15 @@ export default function Settings() {
                 <SettingsIcon className="w-6 h-6 text-lime" /> Protocol Configuration
               </h2>
 
-              <div className="space-y-6">
+              <div className="space-y-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="block font-mono text-[10px] uppercase text-text-muted tracking-widest">Contract Address</label>
-                    <div className="p-4 bg-black/40 border border-white/5 rounded-xl font-mono text-[11px] text-text-secondary truncate">
+                    <div className="p-4 bg-black/40 border border-white/5 rounded-xl font-mono text-[11px] text-text-secondary truncate group relative">
                       de049680c9a2bd74c46e76632bef66869a6278eae250cd033e657748fda484e7
+                      <button className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:text-lime">
+                        <Copy className="w-3 h-3" />
+                      </button>
                     </div>
                   </div>
                   <div className="space-y-2">
@@ -208,18 +278,148 @@ export default function Settings() {
                   </div>
                 </div>
 
+                <div className="space-y-4">
+                  <h3 className="font-mono text-[10px] uppercase text-text-muted tracking-widest">Network Endpoints</h3>
+                  <div className="grid grid-cols-1 gap-3">
+                    {[
+                      { label: 'Midnight Node', value: 'http://localhost:9944' },
+                      { label: 'Indexer Service', value: 'http://localhost:8088' },
+                      { label: 'Proof Server', value: 'http://localhost:8081' },
+                    ].map((svc, i) => (
+                      <div key={i} className="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-white/5">
+                        <span className="font-mono text-xs text-text-secondary">{svc.label}</span>
+                        <span className="font-mono text-[10px] text-lime">{svc.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="p-6 bg-amber-500/5 border border-amber-500/10 rounded-2xl flex gap-5">
                   <div className="shrink-0 p-3 bg-amber-500/10 rounded-xl h-fit">
                     <AlertTriangle className="w-6 h-6 text-amber-500" />
                   </div>
                   <div className="space-y-2">
-                    <h4 className="font-grotesk font-bold text-amber-500">Infrastructure Sync Notice</h4>
+                    <h4 className="font-grotesk font-bold text-amber-500 uppercase tracking-tight">Infrastructure Sync Notice</h4>
                     <p className="text-sm text-text-secondary font-mono leading-relaxed">
                       Your client is currently using a hosted Midnight Node and Indexer. Local proof generation is performed in-browser via the Midnight Proof Server.
                     </p>
-                    <button className="text-xs font-bold text-amber-500 uppercase tracking-widest flex items-center gap-2 mt-2 hover:underline">
+                    <button className="text-[10px] font-bold text-amber-500 uppercase tracking-widest flex items-center gap-2 mt-2 hover:underline">
                       <RefreshCw className="w-3 h-3" /> Re-sync Contract State
                     </button>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          )}
+
+          {activeTab === "security" && (
+            <div className="space-y-6">
+              <Card className="bg-obsidian border-white/10 p-8">
+                <h2 className="text-2xl font-grotesk font-bold mb-8 flex items-center gap-3">
+                  <Shield className="w-6 h-6 text-lime" /> Security & ZK Settings
+                </h2>
+                <div className="space-y-8">
+                  <div className="flex items-center justify-between p-6 bg-black/40 border border-white/5 rounded-2xl">
+                    <div className="space-y-1">
+                      <h4 className="font-mono text-xs font-bold text-white uppercase tracking-widest">Automatic Proof Generation</h4>
+                      <p className="text-[10px] text-text-muted font-mono">Sign registry updates without manual confirmation</p>
+                    </div>
+                    <div className="w-12 h-6 bg-lime rounded-full relative cursor-pointer">
+                      <div className="absolute right-1 top-1 w-4 h-4 bg-black rounded-full"></div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between p-6 bg-black/40 border border-white/5 rounded-2xl">
+                    <div className="space-y-1">
+                      <h4 className="font-mono text-xs font-bold text-white uppercase tracking-widest">Hardware Wallet Mode</h4>
+                      <p className="text-[10px] text-text-muted font-mono">Require Ledger/Trezor for ZK signing operations</p>
+                    </div>
+                    <div className="w-12 h-6 bg-white/10 rounded-full relative cursor-pointer">
+                      <div className="absolute left-1 top-1 w-4 h-4 bg-text-muted rounded-full"></div>
+                    </div>
+                  </div>
+
+                  <div className="pt-4">
+                    <h3 className="font-mono text-[10px] uppercase text-text-muted tracking-widest mb-4">Active Sovereign Sessions</h3>
+                    <div className="space-y-3">
+                      {isLoadingSessions ? (
+                        <div className="p-4 flex justify-center">
+                          <RefreshCw className="w-5 h-5 text-lime animate-spin" />
+                        </div>
+                      ) : sessions.length > 0 ? (
+                        sessions.map((session) => (
+                          <div key={session.id} className={`flex items-center justify-between p-4 bg-white/5 rounded-xl border border-white/5 ${!session.isCurrent ? 'opacity-60' : ''}`}>
+                            <div className="flex items-center gap-3">
+                              <Network className={`w-4 h-4 ${session.isCurrent ? 'text-lime' : 'text-text-muted'}`} />
+                              <div className="flex flex-col">
+                                <span className="font-mono text-xs text-text-primary">
+                                  {getBrowserName(session.userAgent)} ({session.userId.slice(-6).toUpperCase()})
+                                </span>
+                                <span className="text-[9px] text-text-muted font-mono">
+                                  Last active: {new Date(session.lastActive).toLocaleString()}
+                                </span>
+                              </div>
+                            </div>
+                            {session.isCurrent ? (
+                              <Badge variant="verified" className="text-[9px]">Current</Badge>
+                            ) : (
+                              <button
+                                onClick={() => revokeSession(session.id)}
+                                className="text-[9px] font-mono uppercase text-red-400 hover:text-red-300 transition-colors"
+                              >
+                                Revoke
+                              </button>
+                            )}
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-[10px] text-text-muted font-mono uppercase text-center p-4">No other active sessions detected</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          )}
+
+          {activeTab === "appearance" && (
+            <Card className="bg-obsidian border-white/10 p-8">
+              <h2 className="text-2xl font-grotesk font-bold mb-8 flex items-center gap-3">
+                <Eye className="w-6 h-6 text-lime" /> Interface Customization
+              </h2>
+              <div className="space-y-10">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-4">
+                    <h4 className="font-mono text-[10px] uppercase text-text-muted tracking-widest">Theme Palette</h4>
+                    <div className="grid grid-cols-4 gap-3">
+                      {['#CCFF00', '#00F0FF', '#FF00F5', '#FFFFFF'].map((color, i) => (
+                        <button 
+                          key={i} 
+                          className={`aspect-square rounded-xl border-2 transition-all ${i === 0 ? 'border-lime' : 'border-transparent'}`}
+                          style={{ backgroundColor: color }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <h4 className="font-mono text-[10px] uppercase text-text-muted tracking-widest">Glassmorphism Intensity</h4>
+                    <input type="range" className="w-full accent-lime bg-white/10 rounded-lg h-2 appearance-none cursor-pointer" />
+                    <div className="flex justify-between font-mono text-[9px] text-text-muted uppercase">
+                      <span>Pure</span>
+                      <span>Frosted</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-6 border-t border-white/5">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <h4 className="font-mono text-xs font-bold text-white uppercase tracking-widest">Show ZK-Proof Visualizations</h4>
+                      <p className="text-[10px] text-text-muted font-mono">Display animated circuit paths during verification</p>
+                    </div>
+                    <div className="w-12 h-6 bg-lime rounded-full relative cursor-pointer">
+                      <div className="absolute right-1 top-1 w-4 h-4 bg-black rounded-full"></div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -238,17 +438,17 @@ export default function Settings() {
                     <h4 className="font-grotesk font-bold text-white mb-1">Local Database Index</h4>
                     <p className="text-xs text-text-muted font-mono uppercase tracking-widest">Total Cached Assets: 1 | Size: 124KB</p>
                   </div>
-                  <Button variant="secondary" className="h-10 border-white/10 text-[10px] uppercase font-mono">
+                  <Button variant="secondary" className="h-10 border-white/10 text-[10px] uppercase font-mono hover:bg-red-500/10 hover:text-red-400">
                     Clear Cache
                   </Button>
                 </div>
 
                 <div className="p-6 border border-red-500/10 bg-red-500/5 rounded-2xl">
-                  <h4 className="font-grotesk font-bold text-red-400 mb-2">Danger Zone</h4>
-                  <p className="text-sm text-text-secondary font-mono mb-6">
+                  <h4 className="font-grotesk font-bold text-red-400 mb-2 uppercase tracking-tight">Danger Zone</h4>
+                  <p className="text-sm text-text-secondary font-mono mb-6 leading-relaxed">
                     Resetting the protocol state will wipe all local ownership proofs and cached registry data. This action cannot be undone.
                   </p>
-                  <Button variant="secondary" className="w-full h-12 border-red-500/20 text-red-400 hover:bg-red-500/10 transition-all font-mono uppercase text-xs tracking-widest">
+                  <Button variant="secondary" className="w-full h-12 border-red-500/20 text-red-400 hover:bg-red-500/10 transition-all font-mono uppercase text-xs tracking-widest font-bold">
                     Full Protocol Reset
                   </Button>
                 </div>
