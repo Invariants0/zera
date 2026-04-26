@@ -1,9 +1,9 @@
 <h1>ZERA</h1>
   <p><strong>The Institutional-Grade Digital Asset Marketplace</strong></p>
 <br />
+> [!NOTE]  
+>  NFTs are still seen as speculative toys, not serious assets.
 
-> NFTs are still seen as speculative toys, not serious assets.
-> 
 > **ZERA changes that** by turning digital assets into **verified, private, and compliant** financial primitives built for *real ownership*.
 
 ### 🌐 The Paradigm Shift
