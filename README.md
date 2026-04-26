@@ -230,18 +230,8 @@ The current implementation is just the beginning. ZERA is architected to scale i
 > [!NOTE]  
 > For a more detailed breakdown of our system components, please refer to our full documentation.
 
-```mermaid
-graph TD
-    Client[Client App Next.js] --> API[Backend API Routes]
-    API --> Prisma[Prisma ORM]
-    Prisma --> DB[(PostgreSQL Database)]
-    API --> Contract[Midnight Smart Contract Compact]
-    Contract --> Midnight[Midnight Network Proof Server]
-    Client --> Wallet[User Wallet Integration]
-    Wallet --> Midnight
-```
+<img width="1692" height="930" alt="ChatGPT Image Apr 27, 2026, 04_39_54 AM" src="https://github.com/user-attachments/assets/0e3f7fd1-1110-4152-b0e6-96ae97f5c871" />
 
-<details>
 <summary><b>Prerequisites</b></summary>
 <br/>
 
