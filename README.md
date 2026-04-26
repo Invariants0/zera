@@ -2,6 +2,8 @@
 
 An asset registry and ownership management smart contract for the Midnight Network that enables cryptographically-verified asset registration, verification, and ownership transfer on the blockchain.
 
+![Uploading zerabanner.png…]()
+
 ## Prerequisites
 
 - Node.js >= 22.0.0
