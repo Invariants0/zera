@@ -14,9 +14,14 @@ export async function GET(
   const isAlice = ownerAddress.startsWith('0000000000000000000000000000000000000000000000000000000000000000');
   const aliceHex = 'b26236c2575a7b0e24ed9a2d3a647555bcd6e512c73820d4d4dc16614bdcb277';
   
-  const ownerQuery = isAlice 
-    ? { OR: [{ owner: ownerAddress }, { owner: aliceHex }] }
-    : { owner: ownerAddress };
+  const ownerQuery = {
+    OR: [
+      { owner: ownerAddress },
+      { creator: ownerAddress },
+      isAlice ? { owner: aliceHex } : {},
+      isAlice ? { creator: aliceHex } : {},
+    ].filter(q => Object.keys(q).length > 0)
+  };
 
   const [assets, activities] = await prisma.$transaction([
     prisma.asset.findMany({ where: ownerQuery }),

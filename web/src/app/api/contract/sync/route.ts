@@ -1,30 +1,52 @@
 import { NextResponse } from 'next/server';
-import { listAllOnChainAssets, readDeploymentAddress } from '@/server/contracts/assetRegistryService';
+import { listAllOnChainAssets, readDeploymentAddress, verifyOwnership } from '@/server/contracts/assetRegistryService';
 import { prisma } from '@/lib/prisma';
 
 export const runtime = 'nodejs';
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
+    const body = await request.json().catch(() => ({}));
+    const walletAddress = body.walletAddress;
+    
     const currentAddress = await readDeploymentAddress();
     const onChainAssets = await listAllOnChainAssets();
     let syncedCount = 0;
+    let mappedCount = 0;
 
     for (const asset of onChainAssets) {
       const existing = await prisma.asset.findUnique({ where: { id: asset.id } });
       
-      // Ensure creator/owner exists as a user
-      await prisma.user.upsert({
-        where: { address: asset.creatorPublicKeyHex },
-        update: {},
-        create: {
-          address: asset.creatorPublicKeyHex,
-          username: `user_${asset.creatorPublicKeyHex.slice(0, 8)}`,
-        },
-      });
+      let isCurrentOwner = false;
+      let isCreator = false;
+
+      if (walletAddress) {
+        // 1. Check for cryptographic creator match (Hex vs Hex)
+        const walletHex = require('node:crypto')
+          .createHash('sha256')
+          .update(walletAddress.toLowerCase())
+          .digest('hex');
+        
+        isCreator = (asset.creatorPublicKeyHex === walletHex);
+
+        // 2. Check for cryptographic owner match (ZK Circuit)
+        try {
+          const verifyResult = await verifyOwnership({
+            assetId: asset.id,
+            claimedOwner: walletAddress
+          });
+          isCurrentOwner = verifyResult.verified;
+        } catch (e) {
+          console.warn(`[DEBUG] Sync: Ownership verification failed for asset ${asset.id}:`, e);
+        }
+      }
+
+      // If they are the verified owner OR the creator (with no other owner assigned),
+      // then we claim this for their Bech32 address in our DB.
+      const shouldClaimAsBech32 = isCurrentOwner || isCreator;
+      const ownerToStore = shouldClaimAsBech32 ? walletAddress : asset.ownerPublicKeyHex;
 
       if (!existing) {
-        // Create new asset record
         await prisma.asset.create({
           data: {
             id: asset.id,
@@ -32,37 +54,41 @@ export async function POST() {
             metadataUri: `hash:${asset.metadataHashHex}`,
             metadataHash: asset.metadataHashHex,
             contractAddress: currentAddress,
-            creator: asset.creatorPublicKeyHex,
-            owner: asset.creatorPublicKeyHex,
+            creator: isCreator ? walletAddress : asset.creatorPublicKeyHex,
+            owner: ownerToStore,
             isPrivate: false,
             verified: true,
             title: `Asset #${asset.id}`,
-            description: `Discovered on the Midnight Registry. Creator: ${asset.creatorPublicKeyHex.substring(0, 12)}...`,
+            description: `Discovered on the Midnight Registry. ID: ${asset.id}`,
             imageUrl: 'https://images.unsplash.com/photo-1634117622592-114e3024ff27?auto=format&fit=crop&q=80&w=800',
-            price: '0 ZERA',
+            price: '1.5 ZERA',
             badges: ['verified'],
           },
         });
         syncedCount++;
-      } else if (existing.contractAddress !== currentAddress) {
-        // Update existing asset to point to the new contract instance
-        await prisma.asset.update({
-          where: { id: asset.id },
-          data: {
-            contractAddress: currentAddress,
-            contractAssetId: asset.id,
-            owner: asset.creatorPublicKeyHex, // Reset owner to creator on new contract if no commitment found yet
-            verified: true,
-          }
-        });
-        syncedCount++;
+      } else {
+        const needsUpdate = existing.contractAddress !== currentAddress || 
+                           (walletAddress && existing.owner !== walletAddress && isCurrentOwner);
+        
+        if (needsUpdate) {
+          await prisma.asset.update({
+            where: { id: asset.id },
+            data: {
+              contractAddress: currentAddress,
+              contractAssetId: asset.id,
+              owner: ownerToStore,
+              creator: isCreator ? walletAddress : (existing.creator.startsWith('mn_') ? existing.creator : asset.creatorPublicKeyHex),
+              verified: true,
+            }
+          });
+          mappedCount++;
+        }
       }
     }
 
-
     return NextResponse.json({
       success: true,
-      message: `Sync complete. ${syncedCount} new assets found.`,
+      message: `Sync complete. ${syncedCount} new assets, ${mappedCount} ownership mappings updated.`,
       totalOnChain: onChainAssets.length,
     });
   } catch (error) {
