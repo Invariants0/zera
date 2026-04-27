@@ -466,6 +466,7 @@ Edit `contracts/.env`:
 ```env
 # For local development
 MIDNIGHT_NETWORK=local
+ZERA_LOCAL_ONLY=local
 MIDNIGHT_INDEXER_URL=http://localhost:8088
 MIDNIGHT_PROOF_SERVER_URL=http://localhost:6300
 
@@ -484,9 +485,17 @@ cp web/.env.example web/.env.local
 Edit `web/.env.local`:
 
 ```env
+# Environment
+NODE_ENV=development
+ZERA_LOCAL_ONLY=local
+
 # API Configuration
 NEXT_PUBLIC_API_URL=http://localhost:3000/api
 NEXT_PUBLIC_IPFS_API_URL=http://localhost:8080
+IPFS_SERVICE_URL=http://localhost:8080
+
+# Midnight Network
+NEXT_PUBLIC_MIDNIGHT_NETWORK_ID=undeployed
 
 # Database (PostgreSQL)
 DATABASE_URL=postgresql://postgres:zera@localhost:5432/zera

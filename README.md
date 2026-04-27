@@ -257,7 +257,14 @@ Follow these steps to quickly set up and run ZERA locally.
    bun install
    ```
 
-2. **Setup the Entire Project**
+2. **Configure Environment**
+   Copy the example environment files:
+   ```bash
+   cp web/.env.example web/.env
+   cp storage/.env.example storage/.env
+   ```
+
+3. **Setup the Entire Project**
    This script compiles the smart contracts, sets up the Prisma database, and configures the local Docker services.
    ```bash
    bun run project:prepare
